@@ -13,16 +13,7 @@ Built for Raspberry Pi, with support for:
 
 ---
 
-## 📸 Preview
-
-> _(Add screenshots here if desired, or link to a live demo)_
-
----
-
 ## 🔧 Features
-
-<details>
-<summary>Click to view full feature list</summary>
 
 ### Core Display Features
 - Real-time cricket scoreboard display in browser
@@ -62,64 +53,92 @@ Built for Raspberry Pi, with support for:
 - Can be run headless on Raspberry Pi
 - Support for different scoreboard hardware via config
 
-</details>
-
 ---
 
 ## 🚀 Installation (Raspberry Pi)
 
-### 1. Clone the Repository
+## 📋 Before You Start
+
+1. Recommend starting with a clean install of Raspbian on an SD card.
+2. **Fix your Raspberry Pi's IP address** in your router to ensure it doesn't change.
+3. **Turn off built-in Bluetooth** on the Pi if not needed. This improves serial port stability. Add `dtoverlay=disable-bt` to `/boot/config.txt` manually.
+4. **Install the Flask app first** before setting up the ESP32 device.
+5. If using an ESP32, **fix its IP in your router too**, once connected to your Wi-Fi.
+6. **Disable the Serial Console on the Pi** in order to enable serial communication with the scoreboard
+---
+
+## Disable Serial Console (Required for USB Scoreboard Connection)
+
+If your scoreboard uses a USB serial connection, you must disable the serial console on the Raspberry Pi:
+
+1. Open the Raspberry Pi configuration tool:
+   ```bash
+   sudo raspi-config
+   ```
+
+2. Navigate to:
+   `Interface Options` → `Serial Port`
+
+3. When prompted:
+   - **Login shell over serial?** → **No**
+   - **Enable serial port hardware?** → **Yes**
+
+4. Finish and reboot the Pi:
+   ```bash
+   sudo reboot
+   ```
+
+This ensures the serial port is free for the scoreboard connection.
+
+---
+
+## 🚀 Install the Scoreboard App
+
+From a terminal on your Pi:
 
 ```bash
-git clone https://github.com/yourusername/cricket-scoreboard.git
-cd cricket-scoreboard
+cd ~
+wget https://github.com/PTomlinson1/scoreboard/raw/main/scoreboard.sh
+chmod +x install_scoreboard.sh
+./install_scoreboard.sh
 ```
 
-### 2. Install Dependencies
+After installation, open a browser and go to:
+
+```
+http://<YOUR-PI-IP-ADDRESS>/manual
+```
+
+Then reboot your Pi to apply changes.
+
+---
+
+## 🔄 Update the Scoreboard App
+
+Once installed, you can update any time by running:
 
 ```bash
-pip3 install -r requirements.txt
+update_scoreboard
 ```
 
-### 3. Apache + WSGI Setup
+This will pull the latest version from GitHub and restart Apache.
 
-Copy the `flaskapp.conf` file to Apache:
+---
 
-```bash
-sudo cp flaskapp.conf /etc/apache2/sites-available/
-sudo a2ensite flaskapp.conf
-sudo systemctl restart apache2
-```
+## 📎 Notes
 
-Make sure `www-data` has serial access:
-
-```bash
-sudo usermod -aG dialout www-data
-```
+- The installer **adds `www-data` to the `dialout` group** for serial access.
+- Apache is configured to serve the Flask app from `/var/www/flaskapp`.
+- Scripts `install_scoreboard` and `update_scoreboard` are installed to `/usr/local/bin` and accessible globally via terminal.
 
 ---
 
 ## ⚙️ Configuration
 
-All settings are in `config.py`:
-
-```python
-# Serial output config
-SERIAL_OUTPUT_FORMAT = {
-    "fields": ["total", "overs", "wkts"],
-    "widths": {"total": 3, "overs": 2, "wkts": 1},
-    "pad": "-",  # character used to pad digits
-    "prefix": "4,",
-    "suffix": "#",
-    "shutdown_command": "4,aaa,aa,a#",
-    "ack_enabled": True,
-}
-```
-
-Also includes:
-- File paths for data and logs
-- Firebase toggle and credentials
-- Serial port and baud rate
+All settings are in `config.py` in the installed directory.
+The installation script will prompt you to edit the config.
+Everything can be left as default for initial setup, except the fields that your scoreboard is expecting.
+Detailed notes are in the comments in the `config.py` file.
 
 ---
 
@@ -129,15 +148,6 @@ Also includes:
 - `serial_manager.py` and `firebase_manager.py` run in background threads
 - Use `logger.debug/info/warning` to trace runtime behavior
 - Logs stored in `scoreboard.log` (with rotation)
-
----
-
-## 🧑‍💻 For Contributors
-
-Coming soon:
-- Automatic installation script
-- Live device updater
-- Support for team logos + match info
 
 ---
 
