@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scoreboard Log Viewer</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #111;
+      color: #eee;
+      padding: 1em;
+    }
+
+    #log-title {
+      font-size: 1.4em;
+      font-weight: bold;
+      margin-bottom: 1em;
+      text-align: center;
+    }
+
+    #log-container {
+      background-color: #1c1c1c;
+      border: 1px solid #444;
+      padding: 1em;
+      max-height: 80vh;
+      overflow-y: auto;
+
+    }
+
+    .timestamp {
+      color: #aaa;
+	  display: inline;
+    }
+
+    .INFO {
+      color: #4fc3f7;
+	  display: inline;
+    }
+
+    .DEBUG {
+      color: #81c784;
+	  display: inline;
+    }
+
+    .WARNING {
+      color: #fbc02d;
+	  display: inline;
+    }
+
+    .ERROR {
+      color: #ef5350;
+	  display: inline;
+    }
+
+    .button-row {
+      margin-bottom: 1em;
+      text-align: center;
+    }
+
+    button {
+      margin: 0 5px;
+      padding: 0.4em 1em;
+      background-color: #444;
+      color: #fff;
+      border: 1px solid #666;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #666;
+    }
+
+  
+  </style>
+</head>
+<body>
+  <div id="log-title">Scoreboard Log Viewer</div>
+  <div class="button-row">
+    <button onclick="togglePause()"><span id="pause-label">Pause</span></button>
+    <button onclick="clearLog()">Clear</button>
+  </div>
+  <div id="log-container"></div>
+
+  <script>
+    let paused = false;
+    let buffer = [];
+
+    const logContainer = document.getElementById("log-container");
+    const pauseLabel = document.getElementById("pause-label");
+
+    function addLine(line) {
+      const div = document.createElement("div");
+      div.classList.add("log-line");  // optional styling hook
+      div.innerHTML = formatLogLine(line);  // insert styled HTML
+      logContainer.appendChild(div);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+function formatLogLine(line) {
+  const tsMatch = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})/);
+  const levelMatch = line.match(/\b(INFO|DEBUG|WARNING|ERROR)\b/);
+
+  let tsSpan = tsMatch ? `<span class="timestamp">${tsMatch[1]}</span>` : '';
+  let levelSpan = levelMatch ? `<span class="${levelMatch[1]}">${levelMatch[1]}</span>` : '';
+
+  let rest = line;
+  if (tsMatch) rest = rest.replace(tsMatch[1], '');
+  if (levelMatch) rest = rest.replace(levelMatch[1], '');
+
+  return `${tsSpan} ${levelSpan} ${rest}`;
+}
+
+
+    function togglePause() {
+      paused = !paused;
+      pauseLabel.textContent = paused ? "Resume" : "Pause";
+      if (!paused) {
+        buffer.forEach(addLine);
+        buffer = [];
+      }
+    }
+
+    function clearLog() {
+      logContainer.innerHTML = '';
+    }
+
+    const source = new EventSource('/log_stream');
+    source.onmessage = function (event) {
+      if (paused) {
+        buffer.push(event.data);
+      } else {
+        addLine(event.data);
+      }
+    };
+  </script>
+</body>
+</html>

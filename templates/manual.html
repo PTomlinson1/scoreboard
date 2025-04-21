@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CCC Scoreboard Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/font-awesome.min.css" rel="stylesheet">
+  <link href="/static/css/sweetalert2.css" rel="stylesheet">
+  <link href="/static/css/manual.css?v=2" rel="stylesheet">
+  <script src="/static/js/jquery.js"></script>
+  <script src="/static/js/bootstrap.bundle.min.js"></script>
+  <script src="/static/js/sweetalert2.min.js"></script>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/static/favicon/site.webmanifest">
+
+
+</head>
+<body>
+<header class="manual-header-bar">
+  <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+  <div class="manual-header-title">CCC Scoreboard Management</div>
+</header>
+<div class="menu-items hidden" id="menu-items">
+  <a href="/options" onclick="closeMenu()">Options</a>
+  <a href="/static/log.html" target="_blank" onclick="closeMenu()">View Log</a>
+  <a href="/" target="_blank" onclick="closeMenu()">Open Spectator Scoreboard Page</a>
+  <a href="#" id="toggle-mode-link" onclick="confirmToggleMode('{{ mode }}')">
+  Switch to {{ 'PCS' if mode == 'Manual' else 'Manual' }} Mode
+</a>
+  <a href="#" onclick="confirmShutdownOrReboot()">Shutdown / Reboot</a>
+
+</div>
+
+
+
+<div class="d-flex justify-content-center mt-3">
+  <!-- Buttons Column -->
+  <div class="d-flex flex-column align-items-center justify-content-center me-5 manual-button-stack">
+
+    <button id="match-settings-btn" class="btn btn-outline-light btn-sm manual-top-button mb-2">
+      <i class="fas fa-cog me-1"></i>Start Match
+    </button>
+    <button id="start-2nd-innings-btn" class="btn btn-outline-warning btn-sm manual-top-button mb-2">
+      <i class="fas fa-play-circle me-1"></i>Start 2nd Innings
+    </button>
+    <button id="end-match-btn" class="btn btn-outline-danger btn-sm manual-top-button">
+      <i class="fas fa-flag-checkered me-1"></i>End Match
+    </button>
+  </div>
+
+  <!-- Mode Label centered on page -->
+  <div class="d-flex align-items-center justify-content-center flex-grow-1">
+    <div id="mode_label" class="mode-label text-center">
+      Source: Manual
+    </div>
+  </div>
+
+  <!-- Spacer to balance right side -->
+  <div class="me-5" style="width: 180px;"></div>
+</div>
+
+
+
+
+<!-- Placeholder for dynamic PCS warning -->
+<div id="pcs-warning-placeholder"></div>
+
+
+<h5 id="team-names" style="color:#f5e9c9;text-align:center;margin-top:10px;margin-bottom:20px;"></h5>
+
+
+<!-- First Row: BAT A, TOTAL, BAT B -->
+<div class="row text-center manual-top-row">
+
+  
+  <!-- BATTER A -->
+  <div class="col-12 col-md-4 manual-block order-2 order-md-1" id="manual_batter_1_block">
+    <div class="batter-name-block">
+      <span id="batsa_name" class="batter-name">BATSMAN A</span>
+      <input type="text" id="batsa_input" class="form-control hidden" />
+      <button class="btn" id="batsa_edit_btn" onclick="editBatterName('batsa')">Edit</button>
+    </div>
+    <p class="leddisplay" id="batsa_count">000</p>
+    <div class="btn-group">
+      <button class="btn" onclick="batsa_change('minus',6)">-6</button>
+      <button class="btn" onclick="batsa_change('minus',4)">-4</button>
+      <button class="btn" onclick="batsa_change('minus',1)">-1</button>
+      <button class="btn" onclick="batsa_change('zero',0)">Zero</button>
+      <button class="btn" onclick="batsa_change('plus',1)">+1</button>
+      <button class="btn" onclick="batsa_change('plus',4)">+4</button>
+      <button class="btn" onclick="batsa_change('plus',6)">+6</button>
+    </div>
+  </div>
+
+  <!-- TOTAL -->
+  <div class="col-12 col-md-4 manual-block order-1 order-md-2">
+    <h3>TOTAL</h3>
+    <p class="leddisplay" id="total_count">000</p>
+    <div class="btn-group">
+      <button class="btn" onclick="total_change('minus',6)">-6</button>
+      <button class="btn" onclick="total_change('minus',4)">-4</button>
+      <button class="btn" onclick="total_change('minus',1)">-1</button>
+      <button class="btn" onclick="total_change('zero',0)">Zero</button>
+      <button class="btn" onclick="total_change('plus',1)">+1</button>
+      <button class="btn" onclick="total_change('plus',4)">+4</button>
+      <button class="btn" onclick="total_change('plus',6)">+6</button>
+    </div>
+  </div>
+
+  <!-- BATTER B -->
+  <div class="col-12 col-md-4 manual-block order-3 order-md-3" id="manual_batter_2_block">
+    <div class="batter-name-block">
+      <span id="batsb_name" class="batter-name">BATSMAN B</span>
+      <input type="text" id="batsb_input" class="form-control hidden" />
+      <button class="btn" id="batsb_edit_btn" onclick="editBatterName('batsb')">Edit</button>
+    </div>
+    <p class="leddisplay" id="batsb_count">000</p>
+    <div class="btn-group">
+      <button class="btn" onclick="batsb_change('minus',6)">-6</button>
+      <button class="btn" onclick="batsb_change('minus',4)">-4</button>
+      <button class="btn" onclick="batsb_change('minus',1)">-1</button>
+      <button class="btn" onclick="batsb_change('zero',0)">Zero</button>
+      <button class="btn" onclick="batsb_change('plus',1)">+1</button>
+      <button class="btn" onclick="batsb_change('plus',4)">+4</button>
+      <button class="btn" onclick="batsb_change('plus',6)">+6</button>
+    </div>
+  </div>
+</div>
+
+<!-- Second Row: WKTS, OVERS, TARGET -->
+<div class="row text-center manual-bottom-row mt-4">
+  <!-- WICKETS -->
+  <div class="col-12 col-md-4 manual-block">
+    <h3>WKTS</h3>
+    <p class="leddisplay" id="wickets_count">0</p>
+    <div class="btn-group">
+      <button class="btn" onclick="wickets_change('minus',1)">-1</button>
+      <button class="btn" onclick="wickets_change('zero',0)">Zero</button>
+      <button class="btn" onclick="wickets_change('plus',1)">+1</button>
+    </div>
+  </div>
+
+  <!-- OVERS -->
+  <div class="col-12 col-md-4 manual-block">
+    <h3>OVERS</h3>
+    <p class="leddisplay" id="overs_count">0</p>
+    <div class="btn-group">
+      <button class="btn" onclick="overs_change('minus',1)">-1</button>
+      <button class="btn" onclick="overs_change('zero',0)">Zero</button>
+      <button class="btn" onclick="overs_change('plus',1)">+1</button>
+    </div>
+  </div>
+
+  <!-- TARGET -->
+  <div class="col-12 col-md-4 manual-block">
+    <h3>TARGET</h3>
+    <p class="leddisplay" id="target_count">000</p>
+    <form onsubmit="set_target(); return false;">
+      <input type="text" id="target_input" class="form-control" placeholder="Set Target" style="display:inline;width:auto;" />
+      <button type="submit" class="btn">Set</button>
+    </form>
+  </div>
+</div>
+
+
+
+</body>
+</html>
+
+<script>
+function toggleMenu() {
+  document.getElementById('menu-items').classList.toggle('hidden');
+}
+function closeMenu() {
+  document.getElementById('menu-items').classList.add('hidden');
+}
+
+function confirmToggleMode() {
+  closeMenu();  // auto-close menu on click
+  const newMode = currentMode === 'Manual' ? 'PCS' : 'Manual';
+  Swal.fire({
+    title: "Switch data mode?",
+    text: `You're about to switch from ${currentMode} mode to ${newMode} mode.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, switch",
+    cancelButtonText: "Cancel",
+    background: '#222',
+    color: '#f5e9c9',
+    reverseButtons: true,
+    customClass: {
+      popup: 'manual-swal-popup',
+      title: 'manual-swal-title',
+      htmlContainer: 'manual-swal-html',
+      confirmButton: 'manual-swal-confirm',
+      cancelButton: 'manual-swal-cancel'  }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      console.log("Confirmed toggle");
+      toggleMode();
+	} else {
+	  console.log("Cancelled toggle");
+    }
+  });
+}
+
+
+</script>
+
+<script src="/static/js/manual.js?v=5"></script>
+</body>
+</html>

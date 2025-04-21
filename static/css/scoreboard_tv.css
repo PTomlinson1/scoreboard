@@ -1,0 +1,311 @@
+@font-face {
+  font-family: 'Digital-7';
+  src: url('/static/fonts/digital-7.ttf') format('truetype');
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+  font-size: 1.5vw;
+}
+
+.container-fluid {
+  padding: 2vw;
+}
+
+.manual-logo {
+  max-height: 10vh;
+  height: auto;
+}
+
+.manual-logo-wrap {
+  flex: 0 0 auto;
+}
+
+.manual-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4vw;
+  padding: 1vh 2vw;
+  margin-bottom: 0vh;
+}
+
+.manual-teams-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.team-name {
+  font-size: 4vw;
+  font-weight: bold;
+}
+
+.vs-label {
+  font-size: 2.5vw;
+  margin: 0.5vh 0;
+  text-align: center;
+  color: #ccc;
+}
+.manual-topbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 1vw 2vw;
+}
+
+#manual_layout {
+/*  display: block !important;  */
+  width: 100%;
+}
+
+#manual_team_names {
+  font-size: 2vw;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 0vh;
+  margin-bottom: 3vh;
+  text-transform: uppercase;
+}
+
+.manual-row {
+  display: flex !important;
+  justify-content: space-evenly;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+
+}
+
+#manual_batter_row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12vw; /* spacing between batter pairs */
+  margin-bottom: 2vh;
+  margin-top: 2vh;
+}
+
+.batter-pair {
+  display: flex;
+  align-items: center;
+  gap: 1.5vw;
+}
+
+.batter-name {
+  font-size: 3vw;
+/*  white-space: nowrap; */
+  text-transform: uppercase;
+}
+
+.batter-pair .digit {
+  font-size: 4vw;
+}
+
+
+
+.manual-block {
+  flex: 0 1 20%;
+  max-width: 25%;
+  padding: 0vw;
+  text-align: center;
+}
+
+.manual-label {
+  font-size: 1.6vw;
+  margin-bottom: 0vh;
+  font-weight: bold;
+}
+
+.digit {
+  font-family: 'Digital-7', monospace;
+  font-size: 10vw;
+  color: #fff8dc;
+  line-height: 1;
+  display: inline-block;         /* avoid block-level expansion */
+  padding: 0;
+  margin: 0;
+}
+
+.digit span.dim {
+  color: #aaa;
+}
+
+.footer-label {
+  font-family: Arial, sans-serif;
+  font-size: 1.4vw;
+  margin-bottom: 1vh;
+  color: #ccc;
+}
+
+.manual-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0vw 2vw;
+  margin-top: 0vh;
+}
+
+.priority-label {
+  font-size: 1.8vw;
+  color: #ccc;
+}
+
+
+
+
+/* PCS Styling */
+.section-box {
+  border: 2px solid #444;
+  background-color: #111;
+  padding: 2vw;
+  margin-bottom: 3vh;
+}
+
+.section-header {
+  font-weight: bold;
+  font-size: 2vw;
+  margin-bottom: 1vh;
+  color: #ccc;
+}
+
+.row-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1vh;
+  font-size: 1.8vw;
+}
+
+.bowler-row-highlight {
+  color: yellow;
+  font-weight: bold;
+}
+
+#clock {
+  font-size: 4vw;
+  text-align: center;
+}
+
+.strike {
+  color: yellow;
+  font-weight: bold;
+}
+
+.batting-team {
+  color: yellow;
+  font-weight: bold;
+  font-size: 2.5rem;
+}
+
+/* === TV PCS LAYOUT OVERRIDES === */
+
+.section-box {
+  background-color: #1a1a1a;
+  padding: 15px;
+  border: 1px solid #444;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #444;
+  color: #ffffff;
+}
+
+.section-header {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.row-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+
+.pcs-half {
+  flex: 1;
+  min-width: 0;
+}
+
+.bowler-name, .bowler-stat {
+  font-size: 1.3rem;
+}
+
+#run_info, #this_over_label {
+  font-size: 1.6rem;
+}
+
+#clock {
+  font-size: 2.2rem;
+  margin-top: 8px;
+}
+
+.digit {
+  font-size: 2.5rem;
+  font-family: 'Digital-7', monospace;
+}
+
+.bowler-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bowler-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.5rem;
+}
+
+.bowler-header-row {
+  font-weight: bold;
+  border-bottom: 1px solid #888;
+  font-size: 1.6rem;
+}
+
+.bowler-row-highlight {
+  font-weight: bold;
+  color: yellow;
+}
+
+.bowler-name {
+  flex: 2;
+  text-align: left;
+}
+
+.bowler-stat {
+  flex: 1;
+  text-align: center;
+}
+
+#batting_team_score {
+  font-size: 5vw;   /* or even 5.5vw depending on spacing */
+  padding: 3rem
+}
+
+#bowling_team_name {
+  font-size: 3vw;   /* or even 5.5vw depending on spacing */
+
+}
+
+#bowling_team_score {
+  font-size: 3vw;   /* or even 5.5vw depending on spacing */
+  padding-left: 3vw
+
+}
+
+
+.inline-overs {
+  font-weight: bold;
+  font-size: 2.5rem
+}

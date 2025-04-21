@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Main Scoreboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/static/css/scoreboard.css?v=10">
+
+ <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+ <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+ <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+ <link rel="manifest" href="/static/favicon/site.webmanifest">
+
+</head>
+<body>
+<div class="container-fluid">
+ 
+
+
+  <!-- MANUAL MODE new block -->
+<!-- MANUAL MODE -->
+<div id="manual_layout" class="manual-wrapper section-box manual-container" style="display: none;">
+  <div class="manual-header d-flex align-items-center">
+    <img src="/static/images/round logo2.svg" alt="Club Logo" class="manual-logo" />
+  </div>
+  <div id="manual_team_names" class="team-names">-- vs --</div>
+
+<!-- ROW 1: Batter A - TOTAL - Batter B - WKTS (optional) -->
+<div class="manual-top-row d-flex justify-content-between align-items-center mb-2 flex-nowrap px-1">
+<div class="manual-block" id="batter_1_block" style="display: none;">
+  <div class="manual-label" id="manual_batter_1_name">Batter A</div>
+  <div class="digit" id="manual_batter_1_score">0</div>
+</div>
+  <div class="manual-block total-block px-1">
+    <div class="manual-label">TOTAL</div>
+    <div class="digit" id="manual_total">000</div>
+  </div>
+<div class="manual-block" id="batter_2_block" style="display: none;">
+  <div class="manual-label" id="manual_batter_2_name">Batter B</div>
+  <div class="digit" id="manual_batter_2_score">0</div>
+</div>
+  <div class="manual-block wkt-block px-1" id="manual_wkts_top" style="display: block;">
+    <div class="manual-label">WKTS</div>
+    <div class="digit wkt-score" id="manual_wkts">0</div>
+  </div>
+</div>
+
+  <!-- ROW 2: WICKETS (alt), OVERS, CURRENT RATE -->
+  <div class="manual-middle-row d-flex justify-content-around align-items-center mb-2">
+    <div class="manual-block" id="manual_wkts_mid" style="display: none;">
+      <div class="manual-label">WKTS</div>
+      <div class="digit" id="manual_wkts_alt">0</div>
+    </div>
+    <div class="manual-block">
+      <div class="manual-label">OVERS</div>
+      <div class="digit" id="manual_overs">0</div>
+    </div>
+    <div class="manual-block" id="manual_rr_block" style="display:none;">
+      <div class="manual-label">RATE</div>
+      <div class="digit" id="manual_rr">--</div>
+    </div>
+  </div>
+
+  <!-- ROW 3 (2nd innings only): TO WIN - AT REQ RPO FROM - REMAINING -->
+  <div class="manual-bottom-row d-flex justify-content-around mt-3" id="second_innings_row" style="display: none;">
+    <div class="manual-block" id="manual_runsreq_block">
+      <div class="manual-label">TO WIN</div>
+      <div class="digit" id="manual_runs_required">--</div>
+    </div>
+    <div class="manual-block" id="manual_rrreq_block">
+      <div class="manual-label">AT REQ RPO</div>
+      <div class="digit" id="manual_reqd_rate">--</div>
+    </div>
+    <div class="manual-block" id="manual_remaining_block">
+      <div class="manual-label">OVERS LEFT</div>
+      <div class="digit" id="manual_remaining">--</div>
+    </div>
+  </div>
+
+ <div id="priority_label" class="text-center text-secondary small mb-2">Loading source...</div>
+</div>
+
+
+  <!-- PCS MODE -->
+  <div id="pcs_layout" style="display: none;">
+    <div class="section-box mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <img src="/static/images/round logo2.svg" alt="Club Logo" class="pcs-logo">
+      </div>
+
+      <div class="row-line justify-content-center mb-1 align-items-center">
+        <span id="batting_team_name">--</span>
+        <strong><span id="batting_team_score" class="ms-3">--</span></strong>
+        <span class="inline-overs ms-3">
+          <span id="overs">--</span>
+          <span class="label">overs</span>
+        </span>
+      </div>
+
+      <div class="small text-center">vs</div>
+ 
+      <div class="row-line justify-content-center mt-1">
+        <span id="bowling_team_name">--</span>
+        &nbsp;<strong><span id="bowling_team_score" class="ms-2">--</span></strong>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="section-header">BATTERS</div>
+      <div class="row-line mb-1">
+        <div id="batter_1_name">Batter 1</div>
+        <div><span id="batter_1_score">43</span> (<span id="batter_1_balls">82</span>)</div>
+      </div>
+      <div class="row-line">
+        <div id="batter_2_name">Batter 2</div>
+        <div><span id="batter_2_score">10</span> (<span id="batter_2_balls">46</span>)</div>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="bowler-table">
+        <div class="bowler-row bowler-header-row section-header">
+          <div class="bowler-name">BOWLER</div>
+          <div class="bowler-stat">O</div>
+          <div class="bowler-stat">R</div>
+          <div class="bowler-stat">W</div>
+        </div>
+        <div class="bowler-row bowler-row-highlight">
+          <div class="bowler-name" id="current_bowler_name">--</div>
+          <div class="bowler-stat" id="current_bowler_overs">--</div>
+          <div class="bowler-stat" id="current_bowler_runs">--</div>
+          <div class="bowler-stat" id="current_bowler_wkts">--</div>
+        </div>
+        <div class="bowler-row">
+          <div class="bowler-name" id="previous_bowler_name">--</div>
+          <div class="bowler-stat" id="previous_bowler_overs">--</div>
+          <div class="bowler-stat" id="previous_bowler_runs">--</div>
+          <div class="bowler-stat" id="previous_bowler_wkts">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-box text-center">
+      <div id="this_over_label">THIS OVER:</div>
+    </div>
+
+    <div class="section-box text-center">
+      <div id="run_info">RUNS REQUIRED: - AT - RPO</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/static/jquery/jquery-1.9.1.min.js"></script>
+<script src="/static/js/scoreboard.js"></script>
+
+<!-- viewer stats heartbeat code -->
+<script>
+function sendHeartbeat(pingType) {
+  const mode = document.getElementById("viewer_mode")?.value || "manual";
+  const overs = parseFloat(document.getElementById("viewer_overs")?.value || "0");
+  const innings = parseInt(document.getElementById("viewer_innings")?.value || "1");
+
+  fetch('/client_heartbeat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userAgent: navigator.userAgent,
+      screen: {
+        width: window.screen.width,
+        height: window.screen.height
+      },
+      ping_type: pingType,
+      overs,
+      innings,
+      mode
+    })
+  });
+}
+
+window.addEventListener('load', () => sendHeartbeat("initial"));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    sendHeartbeat("visible");
+  }
+});
+setInterval(() => {
+  if (document.visibilityState === 'visible') {
+    sendHeartbeat("interval");
+  }
+}, 15000);
+</script>
+
+<!-- viewer stats data -->
+<input type="hidden" id="viewer_overs" value="0">
+<input type="hidden" id="viewer_mode" value="manual">
+<input type="hidden" id="viewer_innings" value="1">
+
+
+</body>
+</html>

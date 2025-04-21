@@ -1,0 +1,454 @@
+/* === Font Face and Font Styling === */
+@font-face {
+  font-family: 'Digital-7';
+  src: url('/static/fonts/digital-7.ttf') format('truetype');
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 0px;
+}
+
+/* === Digital Font Display === */
+.digit, .leddisplay {
+  font-family: 'Digital-7', monospace;
+  font-size: 60px;
+  color: #f5e9c9;
+}
+
+.leddisplay span.dim, .digit span.dim {
+  color: #bbb;
+}
+
+
+/* === Layout Containers and Sections === */
+.container-fluid {
+  padding: 10px;
+}
+
+.manual-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  text-align: center;
+}
+
+.manual-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.section-box {
+  background-color: #1a1a1a;
+  padding: 10px;
+  border-radius: 12px;
+  margin: 10px auto !important;
+  width: 100%;
+  max-width: 700px;
+  border: 1px solid #444;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+}
+
+.row-line, .bowler-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+/* === Header: Logo, Menus, Team Names === */
+.manual-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 16px;
+  background-color: #111;
+  color: #f5e9c9;
+  font-weight: bold;
+  font-size: 16px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  z-index: 1002;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.manual-header-title {
+  flex-grow: 1;
+  font-size: 18px;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+
+.menu-toggle {
+  font-size: 26px;
+  cursor: pointer;
+  color: #f5e9c9;
+  background: none;
+  border: none;
+  margin-right: 12px;
+  user-select: none;
+}
+
+.menu-items {
+  background: #1c1c1c;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px 0;
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  z-index: 998;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.menu-items a {
+  color: #f5e9c9;
+  padding: 8px 14px;
+  text-decoration: none;
+  border-bottom: 1px solid #333;
+}
+
+.menu-items a:last-child {
+  border-bottom: none;
+}
+
+.menu-items a:hover {
+  background: #333;
+}
+
+#team-names,
+#manual_team_names {
+  font-weight: bold;
+  color: #f5e9c9;
+  margin: 0px 0 20px;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+
+
+/* === Row Layouts === */
+.manual-top-row,
+.manual-middle-row,
+.manual-bottom-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 20px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-bottom: 0rem !important;
+}
+
+.manual-bottom-row {
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: 0px !important;
+}
+
+.manual-column,
+.manual-block {
+  flex: 1;
+  margin: 0 10px;
+  min-width: 90px;
+  text-align: center;
+}
+
+.manual-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;                   
+  padding: 0 4px;
+  margin-top: 0px;
+  min-height: 100px;}
+
+.manual-top-row .manual-block {
+  min-width: 150px; /* Enough for ~15 uppercase characters */
+}
+
+/* === Batter Names === */
+#manual_batter_1_name,
+#manual_batter_2_name,
+.batter-name {
+  font-size: 18px;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batter-name-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+#batsa_input,
+#batsb_input {
+  width: 140px;
+  min-width: 80px;
+}
+
+/* === Buttons === */
+.btn-group {
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.btn-group .btn {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 1px solid #f5e9c9;
+  background: none;
+  color: #f5e9c9;
+  min-width: 40px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-group .btn:nth-child(4) {
+  min-width: 60px;
+}
+
+.btn:hover {
+  background-color: #222;
+}
+
+.btn:active {
+  background-color: #f5e9c9;
+  color: #000;
+  border-color: #f5e9c9;
+}
+
+.btn:focus,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* === SweetAlert2 (Dark Theme) === */
+.manual-swal-popup {
+  background-color: #222;
+  color: #f5e9c9;
+  border: 1px solid #444;
+  font-family: 'Open Sans', sans-serif;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+}
+
+.manual-swal-title {
+  color: #f5e9c9;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.manual-swal-html {
+  color: #ccc;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.manual-swal-confirm,
+.manual-swal-cancel {
+  background-color: transparent;
+  border: 1px solid #666;
+  color: #f5e9c9;
+  font-weight: bold;
+  padding: 10px 20px;
+  font-size: 16px;
+  margin: 0 10px;
+  min-width: 100px;
+}
+
+.manual-swal-confirm:hover,
+.manual-swal-cancel:hover {
+  background-color: #333;
+}
+
+/* === Misc === */
+.hidden {
+  display: none;
+}
+
+.section-header {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #ccc;
+}
+
+.manual-label {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  text-align: center;
+  color: #ffffff
+}
+
+.mode-label {
+  background-color: #1c1c1c;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.6em 1em;
+  display: inline-block;
+  margin: 1em auto;
+  text-align: center;
+  max-width: 90%;
+  color: #ccc;
+}
+
+.manual-logo {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+.strike {
+  color: yellow;
+  font-weight: bold;
+}
+
+.batting-team {
+  color: yellow;
+  font-weight: bold;
+}
+
+.bowler-table {
+  width: 100%;
+}
+
+.bowler-name {
+  flex: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bowler-stat {
+  flex: 1;
+  text-align: center;
+  min-width: 40px;
+}
+
+.bowler-row-highlight {
+  color: yellow;
+  font-weight: bold;
+}
+
+.pcs-logo {
+/*  height: 70px; */
+  max-height: 35px;
+/*  max-width: 120px; */
+  object-fit: contain;
+}
+
+.section-box .digit#clock {
+  font-size: 36px;
+  margin-top: 2px;
+  color: #ffffff;
+}
+
+.footer-label {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 2px;
+  text-align: right;
+}
+
+#batting_team_score {
+ font-size: 24px;
+}
+
+/* === Top Row Adjustments (Batter A - TOTAL - Batter B - WKTS) === */
+
+/* Layout and alignment of the top row */
+.manual-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 0 4px;
+  margin-bottom: 0;
+}
+
+/* Top-row block styles */
+.manual-top-row .manual-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-width: 90px;
+/*  height: 100px; */
+  padding: 0;
+  margin: 0;
+}
+
+/* Slightly smaller name text */
+#manual_batter_1_name,
+#manual_batter_2_name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Shrink batter scores */
+#manual_batter_1_score,
+#manual_batter_2_score {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+/* TOTAL and WKTS revert to full size */
+#manual_total,
+#manual_wkts {
+  font-size: 60px;
+}
+
+/* Mobile-specific tweaks */
+@media (max-width: 576px) {
+  #manual_batter_1_name,
+  #manual_batter_2_name {
+    font-size: 0.8rem;
+  }
+
+  #manual_batter_1_score,
+  #manual_batter_2_score {
+    font-size: 1.9rem;
+  }
+}

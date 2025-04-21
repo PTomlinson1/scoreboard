@@ -1,0 +1,314 @@
+/* ============================= */
+/*    MANUAL MODE LAYOUT RULES   */
+/* ============================= */
+
+.manual-logo {
+  width: 80%
+}
+
+#manual_layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+#manual_layout 
+
+#manual_team_names {
+  font-size: 2vw;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 0vh;
+  margin-bottom: 3vh;
+  text-transform: uppercase;
+}
+
+
+#manual_layout 
+
+.manual-row {
+  display: flex !important;
+  justify-content: space-evenly;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+
+}
+
+
+#manual_layout 
+
+#manual_batter_row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12vw; /* spacing between batter pairs */
+  margin-bottom: 2vh;
+  margin-top: 2vh;
+}
+
+
+#manual_layout 
+
+.batter-pair {
+  display: flex;
+  align-items: center;
+  gap: 1.5vw;
+}
+
+
+#manual_layout 
+
+.batter-name {
+  font-size: 3vw;
+/*  white-space: nowrap; */
+  text-transform: uppercase;
+  margin-right: 50px
+}
+
+
+#manual_layout 
+
+.batter-pair .digit {
+  font-size: 6vw;
+}
+
+
+#manual_layout 
+
+
+
+.manual-block {
+  flex: 0 1 20%;
+  max-width: 25%;
+  padding: 0vw;
+  text-align: center;
+}
+
+
+#manual_layout 
+
+.manual-label {
+  font-size: 1.6vw;
+  margin-bottom: 0vh;
+  font-weight: bold;
+}
+
+
+#manual_layout 
+
+.digit {
+  font-family: 'Digital-7', monospace;
+  font-size: 10vw;
+  color: #fff8dc;
+  line-height: 1;
+  display: inline-block;         /* avoid block-level expansion */
+  padding: 0;
+  margin: 0;
+}
+
+
+#manual_layout 
+
+.digit span.dim {
+  color: #aaa;
+}
+
+
+#manual_layout 
+
+.manual-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0vw 2vw;
+  margin-top: 0vh;
+}
+
+
+#manual_layout 
+
+.priority-label {
+  font-size: 1.8vw;
+  color: #ccc;
+}
+
+
+#manual_layout 
+
+#clock {
+  font-size: 4vw;
+  text-align: center;
+}
+
+
+/* =========================== */
+/*      PCS MODE LAYOUT RULES   */
+/* =========================== */
+
+#pcs_layout .section-box {
+  background-color: #1a1a1a;
+  padding: 15px;
+  padding-bottom: 0px;
+  border: 1px solid #444;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #444;
+  color: #ffffff;
+}
+
+#pcs_layout .batter-bowler-row {
+  padding: 0px;
+  padding-bottom: 10px;
+}
+
+
+#pcs_layout .section-header {font-size: 1.6rem;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 12px;}
+
+
+
+#pcs_layout .row-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.3rem;
+  margin-bottom: 0px;}
+
+
+/* Team name row at top */
+#pcs_layout #batting_team_name,
+#pcs_layout #bowling_team_name {
+  font-size: 2.6rem;
+  font-weight: bold;
+}
+
+/* Batter rows */
+#pcs_layout #batter_1_row,
+#pcs_layout #batter_2_row {
+  font-size: 1.3rem;
+  font-weight: normal;
+}
+
+#pcs_layout #batter_1_name,
+#pcs_layout #batter_2_name,
+#pcs_layout #batter_1_score,
+#pcs_layout #batter_2_score,
+#pcs_layout #batter_1_balls,
+#pcs_layout #batter_2_balls {
+  font-size: 1.3rem;
+}
+
+#pcs_layout .strike {
+  color: yellow;
+  font-weight: bold;
+}
+
+
+#pcs_layout .pcs-half {flex: 1;
+  min-width: 0;}
+
+
+
+#pcs_layout .bowler-name, .bowler-stat {
+  font-size: 1.3rem;
+}
+
+
+
+#pcs_layout #run_info, #this_over_label {
+  font-size: 1.6rem;
+}
+
+
+
+#pcs_layout #clock {font-size: 2.2rem;
+  margin-top: 8px;}
+
+
+
+#pcs_layout .digit {font-size: 2.5rem;
+  font-family: 'Digital-7', monospace;}
+
+
+
+#pcs_layout .bowler-table {display: flex;
+  flex-direction: column;
+  gap: 0.5rem;}
+
+
+
+#pcs_layout .bowler-row {display: flex;
+  justify-content: space-between;
+  padding: 0 0.5rem;}
+
+
+
+#pcs_layout .bowler-header-row {font-weight: bold;
+  border-bottom: 1px solid #888;
+  font-size: 1.6rem;}
+
+
+
+#pcs_layout .bowler-row-highlight {font-weight: bold;
+  color: yellow;}
+
+
+
+#pcs_layout .bowler-name {flex: 2;
+  text-align: left;}
+
+
+
+#pcs_layout .bowler-stat {flex: 1;
+  text-align: center;}
+
+
+
+#pcs_layout #batting_team_score {
+  font-size: 5vw;   
+  padding: 3rem
+}
+
+
+
+#pcs_layout #bowling_team_score {
+  font-size: 3vw;   
+  padding-left: 3vw
+}
+
+/* Team name row at top */
+#pcs_layout #batting_team_name,
+#pcs_layout #bowling_team_name {
+  font-size: 2.2rem;
+  font-weight: bold;
+}
+
+
+
+#pcs_layout .inline-overs {font-weight: bold;
+  font-size: 2.2rem}
+
+
+/* ======================== */
+/*    SHARED / GLOBAL BASE   */
+/* ======================== */
+
+/* Bootstrap classes (e.g., .row, .container, .text-center, etc.)
+   are inherited automatically and not overridden unless scoped. */
+body, html {
+  background-color: #000;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+@font-face {
+  font-family: 'Digital-7';
+  src: url('/static/fonts/digital-7.ttf') format('truetype');
+}
+
