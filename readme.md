@@ -2,6 +2,9 @@
 
 A modern, real-time scoreboard system for cricket clubs — designed to be easy to install, easy to update, and compatible with both physical scoreboards and web-based displays.
 
+Based on the original Build Your Own Scoreboard concept here: https://buildyourownscoreboard.wordpress.com/
+Many thanks to them for the original set up and build instructions.
+
 Built for Raspberry Pi, with support for:
 - Manual or PCS (Play-Cricket Scorer) integration
 - Serial-driven physical displays
@@ -146,6 +149,6 @@ MIT License — free to use, modify, and distribute. Credit appreciated!
 
 ## 💬 Contact & Support
 
-Maintained by **[Your Club / GitHub Username]**
+Maintained by Patrick Tomlinson - Collingbourne Cricket Club
 
-> If your club is interested in using this system, raise an Issue or contact via GitHub.
+If you have any questions or issues, please raise an issue in Github.
