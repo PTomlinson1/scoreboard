@@ -1,0 +1,20 @@
+# Ignore Python bytecode and cache
+__pycache__/
+*.pyc
+
+# Ignore logs and data files
+*.log
+*.json
+*.db
+
+# Ignore credentials
+*.key
+*.pem
+*.p12
+*.crt
+*.env
+*-service-account.json
+
+# VSCode/IDE folders
+.vscode/
+.idea/
