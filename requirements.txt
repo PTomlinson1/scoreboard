@@ -2,3 +2,4 @@ flask>=2.1
 google-auth>=2.6
 requests>=2.25
 pyserial>=3.5
+openpyxl>=3.1
