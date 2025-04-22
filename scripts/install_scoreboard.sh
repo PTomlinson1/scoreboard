@@ -9,7 +9,7 @@ RESET="\033[0m"
 INSTALL_DIR="/var/www/flaskapp"
 REPO_URL="https://github.com/PTomlinson1/scoreboard.git"
 REPO_BRANCH="main"
-TEMP_DIR="$HOME/scoreboard_temp"
+
 
 echo -e "${YELLOW}🚀 Starting installation of the scoreboard system...${RESET}"
 
@@ -53,6 +53,9 @@ fi
 
 # Step 2: Clone repository to temporary directory
 echo -e "${YELLOW}📥 Cloning repository to temporary folder ($TEMP_DIR)...${RESET}"
+# Set up temporary clone location using real user’s home
+USER_HOME=$(eval echo "~$SUDO_USER")
+TEMP_DIR="$USER_HOME/scoreboard_temp"
 rm -rf "$TEMP_DIR"
 git clone -b "$REPO_BRANCH" "$REPO_URL" "$TEMP_DIR"
 
