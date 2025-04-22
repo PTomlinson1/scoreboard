@@ -34,14 +34,14 @@ Once flashed and rebooted, the ESP32 will broadcast a captive portal to allow Wi
 2. A captive portal will appear automatically. If not, open a browser and go to `http://192.168.4.1`.
 3. Select your scoreboard Wi-Fi network and enter the password.
 4. The ESP32 will connect and reboot.
+5. Now go to your router settings and fix the ip address for the ESP32 device
 
-## 5. Flask Server Setup
+## 5. Flask Server POST Endpoint Setup
 
 - Ensure your Pi Flask app is running and accessible on the same network.
-- Once rebooted, open a web browser and go to http://<ESP32-IP-ADDRESS>
-- In the HTTP POST URL field, actions column, enter the update URL for data to be sent to the Pi. The format is http://<PI-IP-ADDRESS>/update
-- **Important**: Your Raspberry Pi should be set with a static IP address, either via your router or using `dhcpcd.conf`.
-- It is also recommended to reserve a fixed IP address for the ESP32 in your router’s DHCP settings.
+- Once rebooted, open a web browser and go to `http://<ESP32-IP-ADDRESS>`
+- In the HTTP POST URL field, actions column, enter the update URL for data to be sent to the Pi. The format is `http://<PI-IP-ADDRESS>/update`
+- **Important**: Your Raspberry Pi should also be set with a static IP address via your router.
 
 ## 6. Test Play Cricket Scorer
 
