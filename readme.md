@@ -55,40 +55,42 @@ Built for Raspberry Pi, with support for:
 
 ---
 
-## 🚀 Installation (Raspberry Pi)
+# 🚀 Installation (Raspberry Pi)
 
-## 📋 Before You Start
+## 📋 First Steps - Get Pi Ready for Install
 
-1. Recommend starting with a clean install of Raspbian on an SD card.
-2. **Fix your Raspberry Pi's IP address** in your router to ensure it doesn't change.
-3. **Turn off built-in Bluetooth** on the Pi if not needed. This improves serial port stability. Add `dtoverlay=disable-bt` to `/boot/config.txt` manually.
-4. **Install the Flask app first** before setting up the ESP32 device.
-5. If using an ESP32, **fix its IP in your router too**, once connected to your Wi-Fi.
-6. **Disable the Serial Console on the Pi** in order to enable serial communication with the scoreboard
----
-
-## Disable Serial Console (Required for USB Scoreboard Connection)
-
-If your scoreboard uses a USB serial connection, you must disable the serial console on the Raspberry Pi:
-
-1. Open the Raspberry Pi configuration tool:
+1. Recommend starting with a clean install of Pi OS 12 Lite 32bit on an SD card, installed with Raspberry Pi Immager tool
+2. During install using the Raspberry Pi Imager Tool, set the following options:
+   - Hostname: scoreboard
+   - Enable SSH
+   - set your required locale
+   - if WiFi is needed, enter the details for your network. If running wired, then diable wifi.
+3. Put your SD card in the Pi and start it, then connect with an SSH terminal (you'll have to find the IP address)
+3. Fix your Raspberry Pi's IP address in your router to ensure it doesn't change (instructions not in the scope of this document)
+4. Turn off built-in Bluetooth on the Pi if not needed. This improves serial port stability.
+   - From a terminal, run
+   - ```bash
+     sudo nano /boot/firmware/config.txt
+     ```
+     Add at the end
+     ```bash
+     # disable built in bluetooth
+     dtoverlay=disable-bt
+     ```
+     Then reboot
+     ```bash
+     sudo reboot
+     ```
+5. Disable the Serial Console on the Pi in order to enable serial communication with the scoreboard
+   From a terminal, run raspi-config:
    ```bash
    sudo raspi-config
    ```
-
-2. Navigate to:
-   `Interface Options` → `Serial Port`
-
-3. When prompted:
-   - **Login shell over serial?** → **No**
-   - **Enable serial port hardware?** → **Yes**
-
-4. Finish and reboot the Pi:
-   ```bash
-   sudo reboot
-   ```
-
-This ensures the serial port is free for the scoreboard connection.
+   Go to 3-Interface Options, then I6-Serial Port and choose:
+       Would you like a login shell to be accessible over serial? NO
+       Would you like the serial port hardware to be enabled? YES
+   The choose finish - the Pi should reboot. 
+7. Install the Flask app first before setting up the ESP32 device, bacuse you will need the Pi IP address to configure the ESP32.
 
 ---
 
@@ -109,11 +111,14 @@ After installation, open a browser and go to:
 http://<YOUR-PI-IP-ADDRESS>/manual
 ```
 
-Then reboot your Pi to apply changes.
+---
+
+# 🚀 Install the ESP32
+
 
 ---
 
-## 🔄 Update the Scoreboard App
+## 🔄 Updating the Scoreboard App
 
 Once installed, you can update any time by running:
 
