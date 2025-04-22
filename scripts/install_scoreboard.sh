@@ -80,7 +80,7 @@ deactivate
 
 # Step 5: Detect IP and ask user to confirm or override
 DEFAULT_IP=$(hostname -I | awk '{print $1}')
-read -p "$(echo -e ${YELLOW}📡 Enter the IP address of your Pi (or press enter to accept the detected IP: [${DEFAULT_IP}]): ${RESET})" PI_IP
+read -p "$(echo -e ${YELLOW}📡 Enter the IP address of your Pi if not [${DEFAULT_IP}] : ${RESET})" PI_IP
 PI_IP=${PI_IP:-$DEFAULT_IP}
 echo -e "${YELLOW}✅ Using IP address: $PI_IP${RESET}"
 
