@@ -60,6 +60,9 @@ git clone -b "$REPO_BRANCH" "$REPO_URL" "$TEMP_DIR"
 echo -e "${YELLOW}📂 Copying Flask app files to $INSTALL_DIR...${RESET}"
 mkdir -p "$INSTALL_DIR"
 cp -r "$TEMP_DIR/flaskapp/"* "$INSTALL_DIR/"
+# Also copy requirements.txt from the temp repo root
+cp "$TEMP_DIR/requirements.txt" "$INSTALL_DIR/"
+
 
 # Step 4: Set up Python virtual environment and install requirements
 echo -e "${YELLOW}📦 Creating Python virtual environment...${RESET}"
