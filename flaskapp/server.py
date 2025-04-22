@@ -74,8 +74,12 @@ from config import FIREBASE_ENABLED, FIREBASE_CREDENTIAL_PATH, FIREBASE_COLLECTI
 
 # Default data structure: all fields blank except batting_team_score and overs
 default_data = {
-    "batting_team_score": "0/0",
-    "overs": "0",
+    "batting_team_score": "",
+    "overs": "",  # Only used in manual mode
+    "overs_bowled": "",
+    "overs_remaining": "",
+    "runs_required": "",
+    "required_run_rate": "",
     "batting_team_name": "",
     "bowling_team_name": "",
     "bowling_team_score": "",
@@ -91,15 +95,20 @@ default_data = {
     "batter_2_score": "",
     "batter_2_balls": "",
     "batter_2_strike": "",
-    "runs_required": "",
-    "required_run_rate": "",
-    "target": "",
-    "overs_bowled": "",
-    "overs_remaining": "",
     "current_over_ball": "",
-    "last_updated_at": "",
-    "result": ""
+    "last_wicket_score": "",
+    "last_wicket_batter": "",
+    "last_wicket_batter_score": "",
+    "last_wicket_dismissal": "",
+    "last_wicket_bowler": "",
+    "last_wicket_fielder": "",
+    "dlt_score": "",
+    "dlp_score": "",
+    "target": "",  # used in manual mode
+    "result": "",  # used post-match
+    "last_updated_at": ""
 }
+
 # Note: "startup_reset" is set manually for PCS only at runtime
 
 
