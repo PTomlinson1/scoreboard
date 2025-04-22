@@ -59,7 +59,7 @@ Built for Raspberry Pi, with support for:
 
 ## 📋 First Steps - Get Pi Ready for Install
 
-1. Recommend starting with a clean install of Pi OS 12 Lite 32bit on an SD card, installed with Raspberry Pi Immager tool
+1. Recommend starting with a clean install of Pi OS 12 Lite 32bit on an SD card, installed with Raspberry Pi Imager tool
 2. During install using the Raspberry Pi Imager Tool, set the following options:
    - Hostname: scoreboard
    - Enable SSH
