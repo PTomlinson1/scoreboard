@@ -108,6 +108,13 @@ a2ensite flaskapp.conf
 echo -e "${YELLOW}🔧 Adding www-data to dialout group...${RESET}"
 usermod -a -G dialout www-data
 
+# Step 9.5: Set ownership and permissions
+echo -e "${YELLOW}🔐 Setting permissions and ownership on $INSTALL_DIR...${RESET}"
+chown -R www-data:www-data "$INSTALL_DIR"
+find "$INSTALL_DIR" -type d -exec chmod 755 {} \;
+find "$INSTALL_DIR" -type f -exec chmod 644 {} \;
+
+
 # Step 10: Make install/update scripts available system-wide
 echo -e "${YELLOW}🔗 Making installer/updater scripts globally accessible...${RESET}"
 cp "$TEMP_DIR/scripts/install_scoreboard.sh" /usr/local/bin/scoreboard-install
@@ -126,4 +133,4 @@ rm -rf "$TEMP_DIR"
 # Done!
 echo -e "${YELLOW}✅ Installation complete!${RESET}"
 echo -e "${YELLOW}➡️  Visit http://$PI_IP/manual to access the manual scoreboard.${RESET}"
-echo -e "${YELLOW}ℹ️  Ensure your Pi has a static IP and Bluetooth is disabled using raspi-config.${RESET}"
+
