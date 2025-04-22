@@ -115,6 +115,7 @@ http://<YOUR-PI-IP-ADDRESS>/manual
 
 # 🚀 Install the ESP32
 
+In the `esp32 firmware` folder follow the instructions in `esp32 firmware/README.md`
 
 ---
 
