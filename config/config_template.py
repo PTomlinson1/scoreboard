@@ -53,7 +53,8 @@ SERIAL_BAUDRATE = 57600
 #    "pad": "-",       # Pad character used for left-padding
 #    "prefix": "4,",   # Start of serial message
 #    "suffix": "#",    # End of serial message
-#    "ack_enabled": True  # Whether to match ACKs against sent values
+#    "ack_enabled": True,  # Whether to match ACKs against sent values
+#    "shutdown_command": "4,000,00,0#" # raw command format executed to scoreboard on shutdown of Pi
 # }
 #
 #
@@ -69,18 +70,19 @@ SERIAL_BAUDRATE = 57600
 
 
 SERIAL_OUTPUT_FORMAT = {
-    "fields": ["total", "overs", "wickets"],  # Order of fields to send
+    "fields": ["total", "overs", "wickets"],
     "widths": {
         "total": 3,
         "wickets": 1,
         "overs": 2,
     },
 
-    "pad": "-",       # Pad character used for left-padding
-    "prefix": "4,",   # Start of serial message
-    "suffix": "#",    # End of serial message
-    "ack_enabled": False  # Whether to match ACKs against sent values
-}
+    "pad": "-",
+    "prefix": "4,",
+    "suffix": "#",
+    "ack_enabled": False,
+    "shutdown_command": "4,000,00,0#"
+ }
 
 
 # Debugging
