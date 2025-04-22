@@ -98,7 +98,7 @@ From a terminal on your Pi:
 
 ```bash
 cd ~
-wget https://github.com/PTomlinson1/scoreboard/raw/main/install_scoreboard.sh
+wget https://github.com/PTomlinson1/scoreboard/raw/main/scripts/install_scoreboard.sh
 chmod +x install_scoreboard.sh
 sudo ./install_scoreboard.sh
 ```
