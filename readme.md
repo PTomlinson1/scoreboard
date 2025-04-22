@@ -100,7 +100,7 @@ From a terminal on your Pi:
 cd ~
 wget https://github.com/PTomlinson1/scoreboard/raw/main/install_scoreboard.sh
 chmod +x install_scoreboard.sh
-./install_scoreboard.sh
+sudo ./install_scoreboard.sh
 ```
 
 After installation, open a browser and go to:
