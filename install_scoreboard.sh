@@ -21,6 +21,11 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Step 0: Ensure required system packages are installed
+echo "📦 Installing required system packages (git, python3, pip, venv)..."
+apt-get update
+apt-get install -y git python3 python3-pip python3-venv apache2 libapache2-mod-wsgi-py3
+
 # Step 1: Check if installation directory exists
 if [ -d "$INSTALL_DIR" ]; then
   echo "⚠️  Existing scoreboard installation found at $INSTALL_DIR"
@@ -53,15 +58,13 @@ echo "📥 Cloning repository..."
 git clone -b "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
 
 # Step 3: Set up Python virtual environment and install requirements
-echo "🐍 Installing python3-venv (if not already)..."
-apt-get update && apt-get install -y python3-venv
-
 echo "📦 Creating Python virtual environment..."
 cd "$INSTALL_DIR"
 python3 -m venv venv
 source venv/bin/activate
 
 echo "📥 Installing Python packages into venv..."
+pip install --upgrade pip
 pip install -r requirements.txt
 deactivate
 
