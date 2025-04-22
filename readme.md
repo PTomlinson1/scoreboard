@@ -81,15 +81,15 @@ Built for Raspberry Pi, with support for:
      ```bash
      sudo reboot
      ```
-5. Disable the Serial Console on the Pi in order to enable serial communication with the scoreboard
-   From a terminal, run raspi-config:
+5. Disable the Serial Console on the Pi in order to enable serial communication with the scoreboard.
+   - From a terminal, run raspi-config:
    ```bash
    sudo raspi-config
    ```
-   Go to 3-Interface Options, then I6-Serial Port and choose:
+   - Go to 3-Interface Options, then I6-Serial Port and choose:
        Would you like a login shell to be accessible over serial? NO
        Would you like the serial port hardware to be enabled? YES
-   The choose finish - the Pi should reboot. 
+   - Then choose finish - the Pi should reboot to apply the changes. 
 7. Install the Flask app first before setting up the ESP32 device, bacuse you will need the Pi IP address to configure the ESP32.
 
 ---
