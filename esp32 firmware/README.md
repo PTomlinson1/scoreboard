@@ -5,6 +5,7 @@ This folder contains the precompiled firmware binary for the M5Stack Atom S3 Lit
 ## Firmware File
 
 - **Filename**: `scoreboard-bt-receiver.factory.bin`
+- Download this to your computer
 
 ## Uploading Firmware with ESPHome Web
 
@@ -23,7 +24,7 @@ Go to: [https://web.esphome.io/](https://web.esphome.io/)
 ### 3. Flash the Firmware
 
 - After connecting, click **"Install"** and select **"Pick a file"**.
-- Choose the provided `scoreboard-bt-receiver.factory.bin` file from this folder.
+- Choose the provided `scoreboard-bt-receiver.factory.bin` file downloaded from this folder.
 - Wait for the flashing process to complete and the device to reboot.
 
 ## 4. Wi-Fi Setup via Captive Portal
