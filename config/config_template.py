@@ -1,5 +1,12 @@
 # config.py
 
+CONFIG_TEMPLATE_VERSION = "1.0.2"
+
+# admin password for Admin page
+# It's not terribly secure, but it stops casual access to the admin page
+# change it to whatever you want
+ADMIN_PASSWORD = "admin"
+
 # General paths
 LOG_FILE = "/var/www/flaskapp/scoreboard.log"
 DATA_PCS_FILE = "/var/www/flaskapp/data_pcs.json"

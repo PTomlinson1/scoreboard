@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Scoreboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <link href="/static/css/sweetalert2.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/scoreboard.css">
+
+  <script src="/static/js/sweetalert2.min.js"></script>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/static/favicon/site.webmanifest">
+
+  <style>
+    html, body {
+      color: #F5E9C9;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .top-bar h2 {
+      margin: 0;
+    }
+
+    .back-btn {
+      background-color: #222;
+      color: #f5e9c9;
+      border: 1px solid #444;
+      padding: 6px 12px;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+
+    .back-btn:hover {
+      background-color: #333;
+      color: #fff;
+    }
+
+    .fixture-table {
+      margin-top: 20px;
+    }
+
+    .fixture-table th, .fixture-table td {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="container mt-4">
+  <div class="top-bar">
+    <h2>Admin</h2>
+    <a href="/manual" class="back-btn">← Back</a>
+  </div>
+
+  <hr>
+
+  <h4 class="mt-4">Logs</h4>
+  <p>View the live Scoreboard system log for diagnostics and activity.</p>
+  <a href="/static/log.html" target="_blank" class="btn btn-outline-light btn-sm">View Scoreboard.log</a>
+
+  <hr>
+
+  <h4 class="mt-4">Serial Status</h4>
+  <p>Updates every second</p>
+  <div id="serial-status-box" class="border rounded p-3 bg-light text-dark small" style="font-family: monospace; max-width: 300px;">
+    <div><strong>Connected:</strong> <span id="ss-connected">-</span></div>
+    <div><strong>ACK Enabled:</strong> <span id="ss-ack-enabled">-</span></div>
+    <div><strong>ACK Matched:</strong> <span id="ss-ack-matched">-</span></div>
+    <div><strong>ACK Timeout:</strong> <span id="ss-ack-timeout">-</span></div>
+    <div><strong>Waiting for ACK:</strong> <span id="ss-waiting">-</span></div>
+    <div><strong>Retry Count:</strong> <span id="ss-retries">-</span></div>
+    <div><strong>Last Sent:</strong> <span id="ss-sent">-</span></div>
+    <div><strong>Last ACK:</strong> <span id="ss-ack">-</span></div>
+  </div>
+
+  <div class="card bg-dark text-light mt-4" style="max-width: 500px;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Send Raw Serial Command</span>
+      <button class="btn btn-sm btn-outline-light" onclick="sendRawSerialCommand()">Send</button>
+    </div>
+    <div class="card-body">
+      <input type="text" id="serial-command-input" class="form-control mb-2" placeholder="e.g. 4,123,45,2#">
+    </div>
+  </div>
+
+  <hr>
+  <h4 class="mt-4">Edit Config</h4>
+  <p>Modify <code>config.py</code> directly. Be careful — syntax errors may stop the server.</p>
+  <p>On save and restart, the previous config will be backed up.</p>
+  <form id="config-form">
+    <textarea id="config-editor" class="form-control" rows="20" style="font-family: monospace; font-size: 0.9rem;"></textarea>
+    <button type="submit" class="btn btn-primary mt-2">Save Config & Restart</button>
+  </form>
+
+
+  <hr>
+
+  <h4>Upload Fixture List (.xlsx)</h4>
+  <p>Use the .xlsx file downloaded from Play Cricket Fixtures admin </p>
+  <form id="fixture-form">
+    <div class="mb-3">
+      <input type="file" class="form-control" id="fixture_file" name="file" accept=".xlsx">
+    </div>
+    <button type="submit" class="btn btn-secondary">Upload</button>
+  </form>
+
+  <hr>
+
+  <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+    <h4 class="mb-0">Stored Home Fixtures</h4>
+    <button class="btn btn-danger btn-sm" onclick="clearFixtures()">Clear All Fixtures</button>
+  </div>
+  <table class="table table-bordered fixture-table">
+    <thead class="table-light">
+      <tr>
+        <th>Date</th>
+        <th>Home Team</th>
+        <th>Away Team</th>
+        <th>Type</th>
+        <th>Division/Cup</th>
+      </tr>
+    </thead>
+    <tbody id="fixture-table-body">
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.getElementById('fixture-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const formData = new FormData();
+  const fileInput = document.getElementById('fixture_file');
+  if (fileInput.files.length === 0) return alert('Please select a file');
+  formData.append('file', fileInput.files[0]);
+
+  fetch('/upload_fixtures', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(resp => {
+    if (resp.status === 'success') {
+      alert('Fixtures uploaded successfully');
+      loadFixtures();
+    } else {
+      alert('Error: ' + resp.message);
+    }
+  });
+});
+
+function loadFixtures() {
+  fetch('/fixtures')
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.getElementById('fixture-table-body');
+      tbody.innerHTML = '';
+
+      // Sort by date (dd/mm/yyyy format)
+      data.sort((a, b) => {
+        const [da, ma, ya] = a.date.split('/');
+        const [db, mb, yb] = b.date.split('/');
+        return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+      });
+
+      data.forEach(fxt => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${fxt.date || ''}</td>
+          <td>${fxt.home_team || ''}</td>
+          <td>${fxt.away_team || ''}</td>
+          <td>${fxt.type || ''}</td>
+          <td>${fxt.division_or_cup || ''}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    });
+}
+
+function clearFixtures() {
+  if (!confirm("Are you sure you want to delete all stored fixtures?")) return;
+
+  fetch('/clear_fixtures', { method: 'POST' })
+    .then(res => res.json())
+    .then(resp => {
+      if (resp.status === 'success') {
+        alert("Fixtures cleared.");
+        loadFixtures();
+      } else {
+        alert("Error: " + resp.message);
+      }
+    });
+}
+
+function updateSerialStatus() {
+  fetch('/serial_status')
+    .then(res => res.json())
+    .then(data => {
+      const yesNo = val => val ? "Yes" : "No";
+
+      document.getElementById('ss-connected').textContent = yesNo(data.connected);
+      document.getElementById('ss-ack-enabled').textContent = yesNo(data.ack_enabled);
+      document.getElementById('ss-ack-matched').textContent = yesNo(data.ack_matched);
+      document.getElementById('ss-ack-timeout').textContent = yesNo(data.ack_timeout_exceeded);
+      document.getElementById('ss-waiting').textContent = yesNo(data.waiting_for_ack);
+      document.getElementById('ss-retries').textContent = data.retry_count ?? '-';
+      document.getElementById('ss-sent').textContent = data.last_sent || '-';
+      document.getElementById('ss-ack').textContent = data.last_ack || '-';
+    });
+}
+
+function loadConfig() {
+  fetch('/get_config')
+    .then(res => res.text())
+    .then(text => {
+      document.getElementById('config-editor').value = text;
+    });
+}
+
+document.getElementById('config-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const content = document.getElementById('config-editor').value;
+
+  Swal.fire({
+    title: 'Save Config and Restart?',
+    html: `<p>Saving changes will restart Apache.<br>Are you sure you want to continue?</p>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Save & Restart',
+    cancelButtonText: 'Cancel',
+    background: '#222',
+    color: '#f5e9c9',
+    reverseButtons: true,
+    customClass: {
+      popup: 'manual-swal-popup',
+      title: 'manual-swal-title',
+      htmlContainer: 'manual-swal-html',
+      confirmButton: 'manual-swal-confirm',
+      cancelButton: 'manual-swal-cancel'
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    fetch('/update_config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Save failed");
+      return res.json();
+    })
+    .then(resp => {
+      if (resp.status !== 'success') throw new Error(resp.message);
+
+      Swal.fire({
+        title: 'Restarting Apache...',
+        html: '<p>This page will reload when the server is back online.</p>',
+        icon: 'info',
+        background: '#222',
+        color: '#f5e9c9',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'manual-swal-popup',
+          title: 'manual-swal-title',
+          htmlContainer: 'manual-swal-html'
+        },
+        didOpen: () => {
+          const checkServer = setInterval(() => {
+            fetch('/status')
+              .then(res => {
+                if (res.ok) {
+                  clearInterval(checkServer);
+                  Swal.close();
+                  location.reload();
+                }
+              })
+              .catch(() => {
+                // Still waiting for Apache to come back
+              });
+          }, 3000);
+        }
+      });
+    })
+    .catch(error => {
+      Swal.fire({
+        title: 'Error',
+        text: error.message || 'Failed to save config.',
+        icon: 'error',
+        background: '#222',
+        color: '#f5e9c9',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'manual-swal-popup',
+          title: 'manual-swal-title',
+          confirmButton: 'manual-swal-confirm'
+        }
+      });
+    });
+  });
+});
+
+
+function sendRawSerialCommand() {
+  const input = document.getElementById('serial-command-input').value.trim();
+  if (!input) return;
+
+  fetch('/send_serial_command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: input })
+  })
+  .then(res => res.json())
+  .then(resp => {
+    if (resp.status !== 'success') {
+      alert("Error: " + resp.message);
+    }
+    // No need to show response — it appears in Serial Status
+  })
+  .catch(err => {
+    alert("Unexpected error: " + err);
+  });
+}
+
+
+
+
+
+// Load config on page load
+window.addEventListener('load', () => {
+  loadConfig();
+  updateSerialStatus();
+  loadFixtures();
+});
+
+
+setInterval(updateSerialStatus, 1000);
+
+
+</script>
+</body>
+</html>

@@ -11,6 +11,7 @@
   <script src="/static/js/jquery.js"></script>
   <script src="/static/js/bootstrap.bundle.min.js"></script>
   <script src="/static/js/sweetalert2.min.js"></script>
+  <script>const ADMIN_PASSWORD = "{{ admin_password | safe }}";</script>
 
   <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
@@ -22,15 +23,14 @@
 <body>
 <header class="manual-header-bar">
   <div class="menu-toggle" onclick="toggleMenu()">☰</div>
-  <div class="manual-header-title">CCC Scoreboard Management</div>
+  <div class="manual-header-title">Scoreboard Management</div>
 </header>
 <div class="menu-items hidden" id="menu-items">
-  <a href="/options" onclick="closeMenu()">Options</a>
-  <a href="/static/log.html" target="_blank" onclick="closeMenu()">View Log</a>
-  <a href="/" target="_blank" onclick="closeMenu()">Open Spectator Scoreboard Page</a>
   <a href="#" id="toggle-mode-link" onclick="confirmToggleMode('{{ mode }}')">
   Switch to {{ 'PCS' if mode == 'Manual' else 'Manual' }} Mode
 </a>
+  <a href="/" target="_blank" onclick="closeMenu()">Open Spectator Scoreboard Page</a>
+  <a href="#" onclick="closeMenu(); confirmAdminAccess(); return false;">Admin</a>
   <a href="#" onclick="confirmShutdownOrReboot()">Shutdown / Reboot</a>
 
 </div>
@@ -205,6 +205,61 @@ function confirmToggleMode() {
 	} else {
 	  console.log("Cancelled toggle");
     }
+  });
+}
+
+
+function confirmAdminAccess() {
+  Swal.fire({
+    title: 'Admin Access',
+    input: 'password',
+    inputLabel: 'Enter admin password',
+    inputPlaceholder: '••••••••',
+    inputAttributes: {
+      autocapitalize: 'off',
+      autocorrect: 'off'
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Enter',
+    cancelButtonText: 'Cancel',
+    background: '#222',
+    color: '#f5e9c9',
+    reverseButtons: true,
+    customClass: {
+      popup: 'manual-swal-popup',
+      title: 'manual-swal-title',
+      input: 'manual-swal-input',
+      confirmButton: 'manual-swal-confirm',
+      cancelButton: 'manual-swal-cancel'
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    fetch('/check_admin_password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: result.value })
+    })
+    .then(res => res.json())
+    .then(resp => {
+      if (resp.status === 'ok') {
+        window.open("/admin", "_blank");
+      } else {
+        Swal.fire({
+          title: 'Access Denied',
+          text: 'Incorrect password',
+          icon: 'error',
+          background: '#222',
+          color: '#f5e9c9',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'manual-swal-popup',
+            title: 'manual-swal-title',
+            confirmButton: 'manual-swal-confirm'
+          }
+        });
+      }
+    });
   });
 }
 

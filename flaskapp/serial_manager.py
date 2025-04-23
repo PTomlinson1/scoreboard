@@ -24,6 +24,7 @@ class SerialManager:
         self.last_sent_msg = None
         self.last_sent_values = None
         self.last_send_time = None
+        self.ack_matched_last = None  # Last ACK match result
         self.waiting_for_ack = False
         self.ack_timeout_exceeded = False
         self.retry_timeout = 10
@@ -140,6 +141,7 @@ class SerialManager:
 
     def _ack_matches_sent(self):
         if not self.last_ack_msg or not self.last_sent_values:
+            self.ack_matched_last = False
             logger.warning(f"[ACK Match] Missing ACK or sent values:\n  ack={self.last_ack_msg}\n  sent={self.last_sent_values}")
             return False
         try:
@@ -159,12 +161,14 @@ class SerialManager:
             logger.debug(f"[ACK Debug] Comparing sent={self.last_sent_values} vs ack={ack_map}")
 
             if ack_map == self.last_sent_values:
+                self.ack_matched_last = True
                 logger.info(f"[ACK Match] ACK matched successfully: {ack_map}")
                 return True
             else:
+                self.ack_matched_last = False
                 logger.warning(f"[ACK Mismatch] Sent: {self.last_sent_values}, Received: {ack_map}")
-                return False
-                
+                return False   
+             
         except Exception as e:
             logger.warning(f"[Serial] Error matching ACK: {e}")
             return False
@@ -173,6 +177,26 @@ class SerialManager:
         self.running = False
         if self.thread.is_alive():
             self.thread.join()
+
+    def send_raw_command(self, cmd_string):
+        """Send raw command string and return any immediate response (non-blocking)."""
+        if not self.ser or not self.ser.is_open:
+            raise Exception("Serial not connected")
+
+        # Clear any pending input to avoid stale lines
+        if self.ser.in_waiting:
+            self.ser.reset_input_buffer()
+
+        self.ser.write((cmd_string + "\n").encode("utf-8"))
+        self.last_sent_msg = cmd_string.strip()  # ✅ update last sent for UI
+
+        # Wait a little and read available response
+        time.sleep(0.3)
+        if self.ser.in_waiting:
+            return self.ser.readline().decode("utf-8").strip()
+        return "(no response)"
+
+
 
 
 # Shutdown hook to send shutdown message if configured

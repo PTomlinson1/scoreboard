@@ -1,7 +1,7 @@
 # server.py
 print("### SERVER.PY IMPORTED")
 
-
+import ast
 import os
 import json
 import time
@@ -25,7 +25,7 @@ from config import (
     FIREBASE_PROJECT_ID, FIREBASE_COLLECTION, FIREBASE_ENABLED,
     SERIAL_PORT, SERIAL_BAUDRATE, DEBUG_MODE,
     VIEWER_PINGS_LOG_TEMPLATE, VIEWER_SESSIONS_FILE_TEMPLATE,
-    OVERS_RULES, HOME_GROUND_IDENTIFIER
+    OVERS_RULES, HOME_GROUND_IDENTIFIER, ADMIN_PASSWORD
 )
 
 
@@ -367,15 +367,6 @@ def data():
     active_source = priority.get("active_source", "PCS")
     data = read_json(DATA_PCS_FILE if active_source == "PCS" else DATA_MANUAL_FILE)
 
-
-# OLD DATA ROUTE - options fields now stored in data_manual.json by /save_options endpoint
-#    # Inject overs_per_innings only if manual mode is active
-#    if active_source == "Manual":
-#        options = read_json(OPTIONS_FILE)
-#        data["overs_per_innings"] = options.get("overs_per_innings", "0")
-#        data['home_team'] = options.get('home_team', '')
-#        data['away_team'] = options.get('away_team', '')
-
     return jsonify(data)
 
 
@@ -420,8 +411,10 @@ def manual_update():
         write_json(DATA_MANUAL_FILE, manual_data)
         logger.info(f"/manual endpoint - Data changed, writing to file: {new_data}")
         push_score_to_arduino()
-    else:
-        logger.debug("/manual endpoint - Data unchanged, skipping write")
+
+# debugging line, but it fills the log
+#    else:
+#        logger.debug("/manual endpoint - Data unchanged, skipping write")
 
     # Always return current manual data (even if unchanged)
     return jsonify({"status": "success", "data": manual_data})
@@ -521,7 +514,7 @@ def index():
 def manual_update_page():
     priority = read_json(PRIORITY_FILE)
     mode = priority.get("active_source", "PCS")
-    return render_template("manual.html", mode=mode)
+    return render_template("manual.html", mode=mode, admin_password=repr(ADMIN_PASSWORD))
 
 
 @app.route('/log_stream')
@@ -565,15 +558,42 @@ def serial_status():
     }
 
     if serial_mgr.ack_enabled:
-        status["ack_matched"] = serial_mgr._ack_matches_sent()
+        status["ack_matched"] = serial_mgr.ack_matched_last
 
     return jsonify(status)
 
+@app.route("/send_serial_command", methods=["POST"])
+def send_serial_command():
+    if serial_mgr is None:
+        return jsonify({"status": "error", "message": "Serial manager not initialized"}), 500
 
-@app.route('/options')
+    try:
+        data = request.get_json()
+        command = data.get("command", "").strip()
+        if not command:
+            return jsonify({"status": "error", "message": "No command provided"}), 400
+
+        logger.info(f"[Admin] Sending raw command: {command}")
+        response = serial_mgr.send_raw_command(command)
+        return jsonify({"status": "success", "command": command, "response": response})
+
+    except Exception as e:
+        logger.error(f"[Admin] Failed to send raw serial command: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+@app.route('/admin')
 def options_page():
-    return render_template('options.html')
+    return render_template('admin.html')
 
+@app.route("/check_admin_password", methods=["POST"])
+def check_admin_password():
+    data = request.get_json()
+    provided = data.get("password", "")
+    if provided == ADMIN_PASSWORD:
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "fail"}), 403
 
     
 @app.route('/save_options', methods=['POST'])
@@ -654,6 +674,97 @@ def upload_fixtures():
         logger.info(f"Fixtures uploaded: {fixtures}")
 
     return jsonify({"status": "success", "fixtures": fixtures})
+
+@app.route('/fixtures')
+def get_fixtures():
+    try:
+        if os.path.exists(FIXTURE_FILE):
+            with open(FIXTURE_FILE, 'r') as f:
+                fixtures = json.load(f)
+            return jsonify(fixtures)
+        else:
+            return jsonify([])  # Return empty list if no file yet
+    except Exception as e:
+        logger.error(f"[Admin] Failed to load fixtures.json: {e}")
+        return jsonify([]), 500
+
+@app.route('/clear_fixtures', methods=['POST'])
+def clear_fixtures():
+    try:
+        with open(FIXTURE_FILE, 'w') as f:
+            json.dump([], f)
+        logger.info("[Admin] Fixtures cleared by user.")
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"[Admin] Failed to clear fixtures: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/get_config')
+def get_config():
+    path = "/var/www/flaskapp/config.py"
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read(), 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        logger.error(f"[Admin] Failed to read config.py: {e}")
+        return "Error loading config", 500
+
+
+@app.route('/update_config', methods=['POST'])
+def update_config():
+    data = request.get_json()
+    content = data.get('content', '')
+
+    # Syntax check
+    try:
+        ast.parse(content)
+    except SyntaxError as e:
+        logger.warning(f"[Admin] Config syntax error: {e}")
+        return jsonify({"status": "error", "message": f"Syntax error in config: {e}"}), 400
+
+    # Runtime validation
+    required_keys = ["SERIAL_OUTPUT_FORMAT", "CONFIG_TEMPLATE_VERSION"]
+    config_scope = {}
+    try:
+        exec(content, config_scope)
+        missing = [key for key in required_keys if key not in config_scope]
+        if missing:
+            logger.warning(f"[Admin] Missing keys in config: {missing}")
+            return jsonify({"status": "error", "message": f"Missing required config fields: {missing}"}), 400
+    except Exception as e:
+        logger.warning(f"[Admin] Error validating config: {e}")
+        return jsonify({"status": "error", "message": f"Runtime error: {e}"}), 400
+
+    # Backup old config
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = f"/var/www/flaskapp/config_backup_{timestamp}.py"
+        os.rename("/var/www/flaskapp/config.py", backup_path)
+        logger.info(f"[Admin] config.py backed up as {backup_path}")
+    except Exception as e:
+        logger.warning(f"[Admin] Failed to backup config.py: {e}")
+
+    # Write new config
+    try:
+        with open("/var/www/flaskapp/config.py", "w", encoding="utf-8") as f:
+            f.write(content)
+        logger.info("[Admin] config.py updated.")
+    except Exception as e:
+        logger.error(f"[Admin] Failed to write config.py: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    # Restart Apache
+    # Option A (safe way)
+    try:
+        subprocess.run(["touch", "/var/www/flaskapp/flaskapp.wsgi"], check=True)
+        logger.info("[Admin] Triggered app reload via WSGI touch.")
+    except Exception as e:
+        logger.error(f"[Admin] Failed to trigger reload: {e}")
+        return jsonify({"status": "error", "message": "Config saved, but failed to reload app."}), 500
+
+    return jsonify({"status": "success"})
+
 
 
 @app.route('/tv')
