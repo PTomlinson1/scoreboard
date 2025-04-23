@@ -91,3 +91,56 @@ DEBUG_MODE = True
 # Viewer Stats Ping logging
 VIEWER_PINGS_LOG_TEMPLATE = "/var/www/flaskapp/viewer_pings_{date}.jsonl"
 VIEWER_SESSIONS_FILE_TEMPLATE = "/var/www/flaskapp/viewer_sessions_{date}.json"
+
+# ------------------------------------------------------------------------------
+# Fixture Parsing Settings
+# ------------------------------------------------------------------------------
+
+# This string is used to identify your club's home fixtures.
+# The "Ground Owner" column in the fixture spreadsheet must match this value
+# for a fixture to be included in your uploaded fixture list.
+
+HOME_GROUND_IDENTIFIER = "<enter your Play Cricket club ground name here>"
+
+# ------------------------------------------------------------------------------
+# Overs per Innings Rules
+# ------------------------------------------------------------------------------
+
+# These rules determine how many overs per innings to assign when a fixture
+# is automatically selected (at startup on a new day).
+#
+# Logic:
+# - The system reads today's fixture from fixtures.json
+# - It checks the Match Type and Division/Cup values
+# - Each rule is checked in order:
+#     - If match_type matches exactly (case-insensitive), and
+#     - If division_contains is blank or matches part of the division string
+#   → then the overs_per_innings value from that rule is applied
+#
+# Example:
+# {
+#     "match_type": "League",
+#     "division_contains": "Division",
+#     "overs": 40
+# }
+#
+# You can also use a rule without division matching:
+# {
+#     "match_type": "Friendly",
+#     "overs": 35
+# }
+#
+# The first matching rule is applied.
+
+OVERS_RULES = [
+    {
+        "match_type": "League",
+        "division_contains": "Division",
+        "overs": 40
+    },
+    {
+        "match_type": "Friendly",
+        "overs": 35
+    }
+]
+

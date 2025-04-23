@@ -24,7 +24,8 @@ from config import (
     OPTIONS_FILE, FIXTURE_FILE, FIREBASE_CREDENTIAL_PATH,
     FIREBASE_PROJECT_ID, FIREBASE_COLLECTION, FIREBASE_ENABLED,
     SERIAL_PORT, SERIAL_BAUDRATE, DEBUG_MODE,
-    VIEWER_PINGS_LOG_TEMPLATE, VIEWER_SESSIONS_FILE_TEMPLATE
+    VIEWER_PINGS_LOG_TEMPLATE, VIEWER_SESSIONS_FILE_TEMPLATE,
+    OVERS_RULES, HOME_GROUND_IDENTIFIER
 )
 
 
@@ -108,7 +109,6 @@ default_data = {
     "result": "",  # used post-match
     "last_updated_at": ""
 }
-
 # Note: "startup_reset" is set manually for PCS only at runtime
 
 
@@ -160,6 +160,24 @@ def is_data_fresh(path):
         logger.warning(f"[Freshness] Failed to parse timestamp: {e}")
         return False
 
+def get_overs_for_fixture(fixture_type, division_or_cup):
+    fixture_type = str(fixture_type or "").lower()
+    division_or_cup = str(division_or_cup or "").lower()
+    for rule in OVERS_RULES:
+        match_type = rule.get("match_type", "").lower()
+        division_sub = rule.get("division_contains", "").lower()
+        logger.debug(f"[Fixture] Checking rule: {rule}")
+        logger.debug(f"[Fixture] fixture_type='{fixture_type}' vs rule_type='{match_type}'")
+        logger.debug(f"[Fixture] division_or_cup='{division_or_cup}' vs contains='{division_sub}'")
+
+        if fixture_type == match_type:
+            if not division_sub or division_sub in division_or_cup:
+                logger.debug(f"[Fixture] Matched rule: {rule}")
+                return rule["overs"]
+    logger.debug("[Fixture] No matching rule found")
+    return None
+
+
 def auto_select_today_fixture():
     today = datetime.today().strftime("%d/%m/%Y")
     fixture_found = False
@@ -194,10 +212,9 @@ def auto_select_today_fixture():
                     options["away_team"] = fxt.get("away_team", "---")
                     logger.info(f"[Fixture] Found fixture: {options['home_team']} vs {options['away_team']}")
 
-                    fixture_type = fxt.get("type", "").lower()
-                    division_or_cup = fxt.get("division_or_cup", "").lower()
+                    fixture_type = fxt.get("type", "")
+                    division_or_cup = fxt.get("division_or_cup", "")
 
-                    # Check if overs_per_innings was already updated today
                     last_updated = options.get("last_updated_at", "")
                     updated_today = False
                     if last_updated:
@@ -206,15 +223,16 @@ def auto_select_today_fixture():
                             updated_today = last_dt == datetime.utcnow().date()
                         except Exception as e:
                             logger.warning(f"[Fixture] Failed to parse last_updated_at: {e}")
-
-                    if fixture_type == "league" and "division" in division_or_cup:
+                    logger.info(f"[Fixture] type: '{fixture_type}', division: '{division_or_cup}'")
+                    overs = get_overs_for_fixture(fixture_type, division_or_cup)
+                    if overs is not None:
                         if not updated_today:
-                            options["overs_per_innings"] = 40
-                            logger.info("[Fixture] League Division match - setting overs_per_innings to 40")
+                            options["overs_per_innings"] = overs
+                            logger.info(f"[Fixture] Setting overs_per_innings to {overs} based on fixture rules")
                         else:
                             logger.info("[Fixture] Overs already updated today - skipping auto-set")
                     else:
-                        logger.info("[Fixture] Fixture found but does not match League Division criteria")
+                        logger.info("[Fixture] Fixture found but does not match any overs rule")
 
                     break
             else:
@@ -229,7 +247,6 @@ def auto_select_today_fixture():
         options["away_team"] = "---"
         logger.info("[Fixture] No fixture found - resetting team names to '---'")
 
-    # Update timestamp and save options
     options["last_updated_at"] = datetime.utcnow().isoformat() + "Z"
 
     try:
@@ -238,7 +255,6 @@ def auto_select_today_fixture():
         logger.info("[Fixture] Updated options.json with fixture info")
     except Exception as e:
         logger.error(f"[Fixture] Failed to write options.json: {e}")
-
 
 
 
@@ -256,7 +272,7 @@ def read_json(file_path, retries=3, delay=0.1):
         try:
             with open(file_path, "r") as f:
                 data = json.load(f)
-                logger.debug(f"[read_json] Successfully read {file_path} on attempt {attempt + 1}")
+#                logger.debug(f"[read_json] Successfully read {file_path} on attempt {attempt + 1}")
                 return data
         except Exception as e:
             logger.debug(f"[read_json] Attempt {attempt + 1} failed for {file_path}: {e}")
@@ -485,7 +501,7 @@ def pcs_status():
             logger.warning(f"[PCS Warning] Timestamp parse error: {e}")
             pcs_ago = "?"
 
-    logger.debug(f"[PCS Status] Warning: {show_pcs_warning}, Mode: {mode}, PCS ago: {pcs_ago}")
+#    logger.debug(f"[PCS Status] Warning: {show_pcs_warning}, Mode: {mode}, PCS ago: {pcs_ago}")
 
     return jsonify({
         "show_pcs_warning": show_pcs_warning,
@@ -613,7 +629,8 @@ def upload_fixtures():
 
     for row in sheet.iter_rows(min_row=2, values_only=True):
         row_data = dict(zip(headers, row))
-        if row_data.get("Ground Owner") == "Collingbourne CC":
+
+        if row_data.get("Ground Owner") == HOME_GROUND_IDENTIFIER:
             excel_date = row_data.get("Date")
             if isinstance(excel_date, (int, float)):
                 date_str = from_excel(excel_date).strftime("%d/%m/%Y")
@@ -622,17 +639,22 @@ def upload_fixtures():
             else:
                 date_str = str(excel_date)
 
-            fixtures.append({
+            fixture = {
                 "date": date_str,
                 "home_team": row_data.get("Home Team", ""),
-                "away_team": row_data.get("Away Team", "")
-            })
+                "away_team": row_data.get("Away Team", ""),
+                "type": row_data.get("Fixture Type", ""),
+                "division_or_cup": row_data.get("Division / Cup", "")
+            }
+
+            fixtures.append(fixture)
 
     with open(FIXTURE_FILE, 'w') as f:
         json.dump(fixtures, f)
         logger.info(f"Fixtures uploaded: {fixtures}")
 
     return jsonify({"status": "success", "fixtures": fixtures})
+
 
 @app.route('/tv')
 def tv_display():

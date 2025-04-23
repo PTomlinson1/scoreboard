@@ -30,7 +30,8 @@ class SerialManager:
         self.retry_count = 0
         self.max_retries = 3
         self.last_retry_attempt = 0
-        self.ack_enabled = SERIAL_OUTPUT_FORMAT.get("ack_enabled", True)
+        self.ack_enabled = SERIAL_OUTPUT_FORMAT.get("ack_enabled", False)
+        logger.info(f"[Serial] ACK matching is {'enabled' if self.ack_enabled else 'disabled'}")
         self.output_format = SERIAL_OUTPUT_FORMAT
         self.thread = threading.Thread(target=self._worker, daemon=True)
         self.thread.start()
@@ -61,9 +62,14 @@ class SerialManager:
                     if line.startswith("1,ACK:"):
                         self.last_ack_msg = line.strip()
                         self.last_send_time = now
-                        self.waiting_for_ack = False
                         self.ack_timeout_exceeded = False
                         logger.info(f"[Serial] ACK received: {line.strip()}")
+
+                        # Match and clear waiting flag only if successful
+                        if self._ack_matches_sent():
+                            self.waiting_for_ack = False
+                        else:
+                            logger.warning("[Serial] Received ACK but values did not match")
 
                 if self.ack_enabled and self.waiting_for_ack:
                     if (now - self.last_send_time > self.retry_timeout and 
@@ -150,6 +156,7 @@ class SerialManager:
                 val = int(ack_parts[i].replace("-", "") or "0")
                 ack_map[key] = val
 
+            logger.debug(f"[ACK Debug] Comparing sent={self.last_sent_values} vs ack={ack_map}")
 
             if ack_map == self.last_sent_values:
                 logger.info(f"[ACK Match] ACK matched successfully: {ack_map}")
