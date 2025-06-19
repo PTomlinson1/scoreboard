@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin - Scoreboard</title>
+  <title>Scoreboard Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/bootstrap.min.css">
   <link href="/static/css/sweetalert2.css" rel="stylesheet">
@@ -52,6 +52,16 @@
     .fixture-table th, .fixture-table td {
       text-align: center;
     }
+
+  .status-ok {
+    color: #28a745; /* Bootstrap green */
+    font-weight: bold;
+  }
+  .status-error {
+    color: #dc3545; /* Bootstrap red */
+    font-weight: bold;
+  }
+
   </style>
 </head>
 <body>
@@ -63,26 +73,56 @@
 
   <hr>
 
-  <h4 class="mt-4">Logs</h4>
-  <p>View the live Scoreboard system log for diagnostics and activity.</p>
-  <a href="/static/log.html" target="_blank" class="btn btn-outline-light btn-sm">View Scoreboard.log</a>
+<div class="row">
+
+  <div class="col-md-6">
+    <h4 class="mt-4">Logs</h4>
+    <p>View the live Scoreboard system log for diagnostics and activity.</p>
+    <a href="/static/log.html" target="_blank" class="btn btn-outline-light btn-sm">View Scoreboard.log</a>
+  </div>
+
+  <div class="col-md-6">
+    <h4 class="mt-4">Reset Data</h4>
+    <p>Resets manual data, PCS data, defaults to PCS mode, pushes to scoreboard</p>
+    <button id="resetDataButton" class="btn btn-danger">Reset Data Files</button>
+  </div>
+
+</div>
 
   <hr>
 
-  <h4 class="mt-4">Serial Status</h4>
-  <p>Updates every second</p>
-  <div id="serial-status-box" class="border rounded p-3 bg-light text-dark small" style="font-family: monospace; max-width: 300px;">
-    <div><strong>Connected:</strong> <span id="ss-connected">-</span></div>
-    <div><strong>ACK Enabled:</strong> <span id="ss-ack-enabled">-</span></div>
-    <div><strong>ACK Matched:</strong> <span id="ss-ack-matched">-</span></div>
-    <div><strong>ACK Timeout:</strong> <span id="ss-ack-timeout">-</span></div>
-    <div><strong>Waiting for ACK:</strong> <span id="ss-waiting">-</span></div>
-    <div><strong>Retry Count:</strong> <span id="ss-retries">-</span></div>
-    <div><strong>Last Sent:</strong> <span id="ss-sent">-</span></div>
-    <div><strong>Last ACK:</strong> <span id="ss-ack">-</span></div>
+
+<div class="row">
+
+
+  <div class="col-md-6">
+    <h4 class="mt-4">Serial Status</h4>
+    <p>Updates every second</p>
+    <div id="serial-status-box" class="border rounded p-3 bg-light text-dark small" style="font-family: monospace; max-width: 300px;">
+      <div><strong>Connected:</strong> <span id="ss-connected">-</span></div>
+      <div><strong>ACK Enabled:</strong> <span id="ss-ack-enabled">-</span></div>
+      <div><strong>ACK Matched:</strong> <span id="ss-ack-matched">-</span></div>
+      <div><strong>ACK Timeout:</strong> <span id="ss-ack-timeout">-</span></div>
+      <div><strong>Waiting for ACK:</strong> <span id="ss-waiting">-</span></div>
+      <div><strong>Retry Count:</strong> <span id="ss-retries">-</span></div>
+      <div><strong>Last Sent:</strong> <span id="ss-sent">-</span></div>
+      <div><strong>Last ACK:</strong> <span id="ss-ack">-</span></div>
+    </div>
   </div>
 
-  <div class="card bg-dark text-light mt-4" style="max-width: 500px;">
+
+  <div class="col-md-6">
+    <h4 class="mt-4">Bluetooth Receiver status</h4>
+    <p>Updates every 5 seconds</p>
+    <div id="esp-status-box" class="border rounded p-3 bg-light text-dark small" style="font-family: monospace; max-width: 300px;">
+      <div><strong>BLE Connected:</strong> <span id="esp-ble-connected">-</span></div>
+      <div><strong>Last Heartbeat:</strong> <span id="esp-last-heartbeat">-</span></div>
+    </div>
+    <button onclick="rebootESP()">Reboot ESP32</button>
+  </div>
+</div>
+
+  <div class="card bg-dark text-light mt-4" style="max-width: 300px;">
     <div class="card-header d-flex justify-content-between align-items-center">
       <span>Send Raw Serial Command</span>
       <button class="btn btn-sm btn-outline-light" onclick="sendRawSerialCommand()">Send</button>
@@ -217,6 +257,26 @@ function updateSerialStatus() {
     });
 }
 
+function updateEspStatus() {
+  fetch('/esp_heartbeat')
+    .then(res => res.json())
+    .then(data => {
+      const bleSpan = document.getElementById('esp-ble-connected');
+      bleSpan.textContent = data.ble_connected ? "Yes" : "No";
+      bleSpan.className = data.ble_connected ? 'status-ok' : 'status-error';
+
+      document.getElementById('esp-last-heartbeat').textContent = data.last_heartbeat || '-';
+    })
+    .catch(() => {
+      const bleSpan = document.getElementById('esp-ble-connected');
+      bleSpan.textContent = 'Error';
+      bleSpan.className = 'status-error';
+      document.getElementById('esp-last-heartbeat').textContent = '-';
+    });
+}
+
+
+
 function loadConfig() {
   fetch('/get_config')
     .then(res => res.text())
@@ -333,6 +393,37 @@ function sendRawSerialCommand() {
 }
 
 
+    async function rebootESP() {
+      if (!confirm('Are you sure you want to reboot the ESP32?')) return;
+
+      try {
+        await fetch('http://192.168.0.101/switch/remote_reboot_esp32/turn_on', { method: 'POST' });
+        alert('Reboot command sent to ESP32.');
+      } catch (error) {
+        console.error('Error rebooting ESP32:', error);
+        alert('Failed to send reboot command.');
+      }
+    }
+
+
+document.getElementById("resetDataButton").addEventListener("click", function () {
+  if (confirm("Are you sure you want to reset all data files?\nThis will clear the scoreboard and start fresh.")) {
+    fetch('/reset_data', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("✅ Data files have been reset successfully.");
+          location.reload();  // Reload page to pick up new data
+        } else {
+          alert("❌ Error resetting data files: " + data.message);
+        }
+      })
+      .catch(err => {
+        alert("❌ Error contacting server: " + err);
+      });
+  }
+});
+
 
 
 
@@ -340,12 +431,13 @@ function sendRawSerialCommand() {
 window.addEventListener('load', () => {
   loadConfig();
   updateSerialStatus();
+  updateEspStatus();
   loadFixtures();
 });
 
 
 setInterval(updateSerialStatus, 1000);
-
+setInterval(updateEspStatus, 5000);
 
 </script>
 </body>

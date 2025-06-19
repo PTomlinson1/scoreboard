@@ -41,7 +41,7 @@ Once flashed and rebooted, the ESP32 will broadcast a captive portal to allow Wi
 
 - Ensure your Pi Flask app is running and accessible on the same network.
 - Once rebooted, open a web browser and go to `http://<ESP32-IP-ADDRESS>`
-- In the HTTP POST URL field, actions column, enter the update URL for data to be sent to the Pi. The format is `http://<PI-IP-ADDRESS>/update`
+- In the "Pi IP Address" field, actions column, enter the Pi IP address. The format is `nnn.nnn.nnn.nnn`
 - **Important**: Your Raspberry Pi should also be set with a static IP address via your router.
 
 ## 6. Test Play Cricket Scorer

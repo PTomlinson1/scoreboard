@@ -11,6 +11,8 @@ import tempfile
 import shutil
 import subprocess
 import requests
+import threading
+from threading import Thread, Lock, Event
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from datetime import datetime, date
@@ -29,7 +31,7 @@ from config import (
 )
 
 
-
+os.environ["GRPC_DNS_RESOLVER"] = "native"
 
 # Setup logger
 
@@ -66,8 +68,9 @@ app = Flask(__name__)
 from serial_manager import SerialManager, serial_mgr
 from config import SERIAL_PORT, SERIAL_BAUDRATE
 
+
 # set up Firebase publishing
-from firebase_manager import FirebasePublisher, firebase_mgr
+from firebase_manager import FirebasePublisher, firebase_mgr, push_today_to_viewer_dates, init_firebase
 from config import FIREBASE_ENABLED, FIREBASE_CREDENTIAL_PATH, FIREBASE_COLLECTION, FIREBASE_PROJECT_ID
 
 
@@ -88,11 +91,11 @@ default_data = {
     "current_bowler_score": "",
     "previous_bowler_name": "",
     "previous_bowler_score": "",
-    "batter_1_name": "",
+    "batter_1_name": "BATTER 1",
     "batter_1_score": "",
     "batter_1_balls": "",
     "batter_1_strike": "",
-    "batter_2_name": "",
+    "batter_2_name": "BATTER 2",
     "batter_2_score": "",
     "batter_2_balls": "",
     "batter_2_strike": "",
@@ -107,7 +110,8 @@ default_data = {
     "dlp_score": "",
     "target": "",  # used in manual mode
     "result": "",  # used post-match
-    "last_updated_at": ""
+    "last_updated_at": "",
+    "ball_timeline": []
 }
 # Note: "startup_reset" is set manually for PCS only at runtime
 
@@ -115,6 +119,12 @@ default_data = {
 # for viewer stats
 client_sessions = {}
 
+# Buffer for incoming PCS updates
+pending_pcs_updates = []
+last_update_time = None
+pending_lock = Lock()
+QUIET_TIME_SECONDS = 2.0  # quiet time to wait before processing pcs data
+buffer_flush_timer = None
 
 
 def init_data_file(file_path, default_data):
@@ -297,9 +307,128 @@ def write_json(file_path, data):
         logger.error(f"[write_json] Failed to write {file_path}: {e}")
 
 
+# helper for processing PCS data
+
+def process_pending_updates():
+    """Apply all pending PCS updates after quiet time."""
+    global pending_pcs_updates, last_update_time, buffer_flush_timer
+
+    with pending_lock:
+        if not pending_pcs_updates:
+            return
+
+        combined_data = {}
+        for update in pending_pcs_updates:
+            combined_data.update(update)
+
+        pending_pcs_updates.clear()
+        last_update_time = None
+
+    if not combined_data:
+        return
+
+    logger.info(f"[/update] Processing buffered PCS data (after quiet period): {combined_data}")
+
+    data = read_json(DATA_PCS_FILE)
+
+    previous_ovb_str = data.get("overs_bowled", "")
+    previous_ovr_str = data.get("overs_remaining", "")
+
+    # Apply all the new fields
+    for key, value in combined_data.items():
+        data[key] = value
+
+    # Reset ball_timeline if OVB indicates new innings
+    if combined_data.get("overs_bowled", "") == "0":
+        if data.get("ball_timeline") != []:
+            data["ball_timeline"] = []
+            logger.info("[PCS Inning Reset] Overs bowled = 0 → Resetting ball_timeline")
 
 
 
+    # Fallback logic: infer overs_bowled if missing and OVR changed
+    if "overs_remaining" in combined_data and "overs_bowled" not in combined_data:
+        try:
+            new_ovr = int(combined_data["overs_remaining"])
+            old_ovr = int(previous_ovr_str) if previous_ovr_str.isdigit() else None
+            old_ovb = float(previous_ovb_str) if previous_ovb_str.replace(".", "", 1).isdigit() else None
+
+            if old_ovr is not None and old_ovb is not None:
+                if new_ovr == old_ovr - 1:
+                    inferred_ovb = int(old_ovb) + 1
+                    data["overs_bowled"] = str(inferred_ovb)
+                    logger.info(f"[PCS Overs Fallback] Inferred OVB = {inferred_ovb} from OVR change: {old_ovr} -> {new_ovr}")
+        except Exception as e:
+            logger.warning(f"[PCS Overs Fallback] Failed to infer overs_bowled: {e}")
+
+    if "startup_reset" in data:
+        del data["startup_reset"]
+        logger.info("[/update] Received first PCS data – startup_reset flag cleared")
+
+    data["last_updated_at"] = datetime.utcnow().isoformat() + "Z"
+    write_json(DATA_PCS_FILE, data)
+
+    logger.info(f"[/update] PCS Data updated after buffering: {combined_data}")
+    push_score_to_arduino()
+
+    # Clear the buffer flush timer now that we've processed
+    buffer_flush_timer = None
+
+
+# -------------------------------
+# Ball timeline update helper
+# -------------------------------
+
+MAX_BALLS = 48  # Number of balls + over markers to keep in ball_timeline
+
+def update_ball_timeline_from_cov(new_cov):
+    """Update the ball timeline inside data_pcs.json based on incoming COV field."""
+
+    if new_cov is None:
+        return
+
+    ball_data = new_cov.strip()
+
+    try:
+        data = read_json(DATA_PCS_FILE)
+    except Exception as e:
+        logger.warning(f"[Update Ball Timeline] - Failed to read PCS file in ball timeline update: {e}")
+        data = {}
+
+    timeline = data.get('ball_timeline', [])
+    if not isinstance(timeline, list):
+        timeline = []
+
+    if not ball_data:
+        # COV " " received -> over has ended
+        # Insert over marker if not already there
+        if not timeline or timeline[-1] != '|':
+            timeline.append('|')
+    else:
+        # COV with ball data -> replace current over
+        balls = ball_data.split()
+
+        # Find last over marker
+        if '|' in timeline:
+            last_over_index = len(timeline) - 1 - timeline[::-1].index('|')
+            timeline = timeline[:last_over_index + 1]  # Keep up to last |
+        else:
+            timeline = []  # No over yet
+
+        timeline.extend(balls)
+
+    # Trim timeline if too long
+    if len(timeline) > MAX_BALLS:
+        timeline = timeline[-MAX_BALLS:]
+
+    data['ball_timeline'] = timeline
+
+    logger.info(f"[Update Ball Timeline] - Updated ball timeline: {' '.join(timeline)}")
+
+    try:
+        write_json(DATA_PCS_FILE, data)
+    except Exception as e:
+        logger.warning(f"[Update Ball Timeline] - Failed to write PCS file in ball timeline update: {e}")
 
 
 
@@ -373,24 +502,104 @@ def data():
 
 
 
+
+# new version for raw data from esp32
 @app.route('/update', methods=['POST'])
 def update_pcs():
-    new_data = request.json
-    data = read_json(DATA_PCS_FILE)
+    global pending_pcs_updates, last_update_time, buffer_flush_timer
 
-    for key, value in new_data.items():
-        data[key] = value
+    incoming = request.json
+    logger.info(f"[/update] Incoming raw data: {incoming}")
 
-    if "startup_reset" in data:
-        del data["startup_reset"]
-        logger.info("[/update] Received first PCS data – startup_reset flag cleared")
+    new_data = {}
 
-    data["last_updated_at"] = datetime.utcnow().isoformat() + "Z"
-    write_json(DATA_PCS_FILE, data)
+    code_map = {
+        "COV": "current_over_ball",
+        "OVB": "overs_bowled",
+        "OVR": "overs_remaining",
+        "RRQ": "runs_required",
+        "RRR": "required_run_rate",
+        "BTN": "batting_team_name",
+        "BTS": "batting_team_score",
+        "FTN": "bowling_team_name",
+        "FTS": "bowling_team_score",
+        "B1N": "batter_1_name",
+        "B1S": "batter_1_score",
+        "B1B": "batter_1_balls",
+        "B1K": "batter_1_strike",
+        "B2N": "batter_2_name",
+        "B2S": "batter_2_score",
+        "B2B": "batter_2_balls",
+        "B2K": "batter_2_strike",
+        "F1N": "current_bowler_name",
+        "F1S": "current_bowler_score",
+        "F2N": "previous_bowler_name",
+        "F2S": "previous_bowler_score",
+        "LWK": "last_wicket_score",
+        "LWN": "last_wicket_batter",
+        "LWS": "last_wicket_batter_score",
+        "LWD": "last_wicket_dismissal",
+        "LWB": "last_wicket_bowler",
+        "LWF": "last_wicket_fielder",
+        "DLT": "dlt_score",
+        "DLP": "dlp_score"
+    }
 
-    logger.info(f"/update endpoint - PCS Data received: {new_data}")
-    push_score_to_arduino()
-    return jsonify({"status": "success", "data": data})
+    known_prefixes = list(code_map.keys())
+
+    now = time.time()
+    last_update_time = now  # Always update timestamp when something arrives
+
+    if "data" in incoming:
+        ble_string = incoming["data"]
+        cursor = 0
+
+        while cursor < len(ble_string):
+            matched = False
+            for prefix in known_prefixes:
+                if ble_string.startswith(prefix, cursor):
+                    cursor += len(prefix)
+                    start = cursor
+                    while cursor < len(ble_string) and not any(ble_string.startswith(p, cursor) for p in known_prefixes):
+                        cursor += 1
+                    value = ble_string[start:cursor]
+                    field_name = code_map[prefix]
+                    new_data[field_name] = value
+
+                    logger.debug(f"[/update] Matched {prefix} -> {field_name}: {value}")
+
+                    if "current_over_ball" in new_data:
+                        logger.debug(f"Calling ball timeline update with: {repr(new_data['current_over_ball'])}")
+                        update_ball_timeline_from_cov(new_data["current_over_ball"])
+
+
+                    matched = True
+                    break
+            if not matched:
+                logger.warning(f"[/update] Warning: Unexpected data at position {cursor}: {ble_string[cursor:cursor+10]}")
+                cursor += 1
+    else:
+        new_data = incoming
+
+    logger.info(f"[/update] Parsed PCS data: {new_data}")
+
+    # Add the new parsed data to the pending buffer
+    with pending_lock:
+        pending_pcs_updates.append(new_data)
+
+    # Handle flush timer
+    if buffer_flush_timer is not None:
+        buffer_flush_timer.cancel()
+
+    buffer_flush_timer = threading.Timer(QUIET_TIME_SECONDS, process_pending_updates)
+    buffer_flush_timer.start()
+
+    return jsonify({"status": "success", "pending_updates": len(pending_pcs_updates)})
+
+
+
+
+
 
 @app.route('/manual', methods=['POST'])
 def manual_update():
@@ -544,6 +753,14 @@ def serial_status():
             "status": "Serial manager not initialized"
         })
 
+    # Read current mode from priority file
+    try:
+        priority = read_json(PRIORITY_FILE)
+        scoring_mode = priority.get("active_source", "Manual")
+    except Exception as e:
+        logger.warning(f"[serial_status] Failed to read priority file: {e}")
+        scoring_mode = "Manual"
+
     # Extract values from serial_mgr
     status = {
         "ack_enabled": serial_mgr.ack_enabled,
@@ -554,7 +771,8 @@ def serial_status():
         "ack_timeout_exceeded": serial_mgr.ack_timeout_exceeded,
         "retry_count": serial_mgr.retry_count,
         "last_sent_values": serial_mgr.last_sent_values or [],
-        "ack_matched": None  # Set below only if ACK matching is enabled
+        "mode": scoring_mode,
+        "ack_matched": None  # Only set if ACK matching is enabled
     }
 
     if serial_mgr.ack_enabled:
@@ -612,9 +830,11 @@ def save_options():
             if key in data:
                 manual_data[key] = data[key]
 
-        manual_data["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        manual_data["last_updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         write_json(DATA_MANUAL_FILE, manual_data)
-        logger.info(f"/save_options endpoint - Options saved: {data}")
+        logger.info(f"[/save_options] - Options saved: {data}")
+        logger.info(f"[/save_options] - Options saved: {manual_data}")
+
     except Exception as e:
         logger.warning(f"/save_options endpoint - Could not sync Options to manual data: {e}")
 
@@ -622,6 +842,7 @@ def save_options():
     try:
         if firebase_mgr:
             firebase_mgr.publish("options", data)
+            firebase_mgr.publish("data", manual_data)
     except Exception as e:
         logger.warning(f"[Firestore] Failed to push options: {e}")
 
@@ -804,6 +1025,7 @@ def client_heartbeat():
     now = time.time()
     data = request.get_json(force=True)
 
+
     # Update per-IP session info
     if ip not in client_sessions:
         client_sessions[ip] = {
@@ -828,6 +1050,9 @@ def client_heartbeat():
     session["mode"] = data.get("mode", session["mode"])
     session["overs"] = data.get("overs", 0)
     session["innings"] = data.get("innings", 1)
+    session["user_agent"] = data.get("userAgent", "")
+    session["screen"] = data.get("screen", {})
+
     pt = data.get("ping_type", "interval")
     if pt in session["ping_type_counts"]:
         session["ping_type_counts"][pt] += 1
@@ -840,7 +1065,9 @@ def client_heartbeat():
         "ping_type": pt,
         "mode": session["mode"],
         "overs": session["overs"],
-        "innings": session["innings"]
+        "innings": session["innings"],
+        "user_agent": session["user_agent"],
+        "screen": session["screen"]
     }
     log_path = VIEWER_PINGS_LOG_TEMPLATE.format(date=today_str)
     try:
@@ -875,8 +1102,10 @@ def viewer_report_page():
 
 @app.route('/viewer_ping_data')
 def viewer_ping_data():
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    path = VIEWER_PINGS_LOG_TEMPLATE.format(date=today_str)
+    date_str = request.args.get("date")
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    path = VIEWER_PINGS_LOG_TEMPLATE.format(date=date_str)
     result = []
 
     try:
@@ -892,6 +1121,96 @@ def viewer_ping_data():
 
     return jsonify(result)
 
+@app.route('/viewer_ping_dates')
+def viewer_ping_dates():
+    folder = os.path.dirname(VIEWER_PINGS_LOG_TEMPLATE)
+    prefix = os.path.basename(VIEWER_PINGS_LOG_TEMPLATE).split("{")[0]
+    dates = []
+
+    try:
+        for f in os.listdir(folder):
+            if f.startswith(prefix) and f.endswith(".jsonl"):
+                date_part = f[len(prefix):-6]  # Strip prefix and '.jsonl'
+                dates.append(date_part)
+        dates.sort(reverse=True)
+    except Exception as e:
+        logger.warning(f"Failed to list ping log files: {e}")
+
+    return jsonify(dates)
+
+
+# ESP heartbeat
+
+
+ESP_STATUS_FILE = '/var/www/flaskapp/esp_status.json'  # Adjust to your server paths
+
+@app.route('/esp_heartbeat', methods=['POST'])
+def esp_heartbeat():
+    """Receive ESP32 heartbeat and save status."""
+    data = request.get_json(force=True)
+    logger.info(f"[ESP Heartbeat] - Heartbeat received: {data}")
+
+    try:
+        status = {
+            "last_heartbeat": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "ble_connected": data.get("ble_connected", False),
+        }
+        write_json(ESP_STATUS_FILE, status)
+    except Exception as e:
+        logger.warning(f"[ESP Heartbeat] - Failed to save ESP status: {e}")
+
+    return "OK", 200
+
+@app.route('/esp_heartbeat', methods=['GET'])
+def get_esp_status():
+    """Provide latest ESP32 heartbeat status."""
+    try:
+        data = read_json(ESP_STATUS_FILE)
+#        logger.info(f"[ESP Heartbeat] - Heartbeat data sent: {data}")
+        return jsonify(data)
+    except Exception as e:
+        logger.warning(f"[ESP Heartbeat] - Failed to read ESP status: {e}")
+        return jsonify({"error": "unavailable"}), 500
+
+
+@app.route("/reset_data", methods=["POST"])
+def reset_data():
+    """Reset data files to default values from Admin page, same as startup routine."""
+
+    logger.info("[Admin] Data files reset triggered from Admin page.")
+    try:
+        # Reset data_manual.json
+        reset_manual = default_data.copy()
+        reset_manual["last_updated_at"] = datetime.utcnow().isoformat() + "Z"
+        write_json(DATA_MANUAL_FILE, reset_manual)
+
+        # Reset data_pcs.json
+        reset_pcs = default_data.copy()
+        reset_pcs["last_updated_at"] = datetime.utcnow().isoformat() + "Z"
+        reset_pcs["startup_reset"] = True  # Mark startup reset
+        write_json(DATA_PCS_FILE, reset_pcs)
+
+        # Set default priority to PCS
+        write_json(PRIORITY_FILE, {
+            "active_source": "PCS",
+            "updated_at": datetime.utcnow().isoformat() + "Z"
+        })
+
+        # Apply today's fixture info
+        auto_select_today_fixture()
+
+        # Pause briefly to allow serial to stabilize
+        time.sleep(2.0)
+
+        # Push default scoreboard values
+        push_score_to_arduino()
+
+        logger.info("[Admin] Data files reset successfully via Admin page.")
+
+        return jsonify({"status": "success", "message": "Data files reset."}), 200
+    except Exception as e:
+        logger.error(f"[Admin] Failed to reset data files: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 
@@ -914,16 +1233,26 @@ def startup_routine():
 
 
     if FIREBASE_ENABLED:
-        firebase_config = {
-          "FIREBASE_ENABLED": FIREBASE_ENABLED,
-          "FIREBASE_CREDENTIAL_PATH": FIREBASE_CREDENTIAL_PATH,
-          "FIREBASE_PROJECT_ID": FIREBASE_PROJECT_ID,
-          "FIREBASE_COLLECTION": FIREBASE_COLLECTION
-        }
-        firebase_mgr = FirebasePublisher(firebase_config)
-        logger.info("[Startup] FirebaseManager initialized")
-        atexit.register(firebase_mgr.stop)
+        try:
+            init_firebase(FIREBASE_CREDENTIAL_PATH)  # ✅ ensure Firebase is ready before anything else
+            firebase_config = {
+                "FIREBASE_ENABLED": FIREBASE_ENABLED,
+                "FIREBASE_CREDENTIAL_PATH": FIREBASE_CREDENTIAL_PATH,
+                "FIREBASE_PROJECT_ID": FIREBASE_PROJECT_ID,
+                "FIREBASE_COLLECTION": FIREBASE_COLLECTION
+            }
+            firebase_mgr = FirebasePublisher(firebase_config)
+            logger.info("[Startup] FirebaseManager initialized")
+            atexit.register(firebase_mgr.stop)
 
+  
+        except Exception as e:
+            logger.error(f"[Startup] Firebase initialization failed: {e}")
+            firebase_mgr = None  # Optional fallback
+  
+        if firebase_mgr:
+            from firebase_manager import delayed_push_viewer_date
+            Thread(target=delayed_push_viewer_date, daemon=True).start()
 
 
     startup_flag = "/tmp/scoreboard_startup_done.flag"

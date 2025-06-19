@@ -89,6 +89,7 @@
   <div id="log-container"></div>
 
   <script>
+    let lastActivity = Date.now();
     let paused = false;
     let buffer = [];
 
@@ -133,12 +134,26 @@ function formatLogLine(line) {
 
     const source = new EventSource('/log_stream');
     source.onmessage = function (event) {
+      lastActivity = Date.now();
       if (paused) {
         buffer.push(event.data);
       } else {
         addLine(event.data);
       }
     };
+
+
+
+setInterval(() => {
+  const now = Date.now();
+  const idleTime = now - lastActivity;
+
+  if (idleTime > 5 * 60 * 1000) { // 5 minutes idle, no matter if focused
+    console.log("Page idle too long, refreshing log viewer...");
+    if (source) source.close();
+    location.reload();
+  }
+}, 60 * 1000);
   </script>
 </body>
 </html>

@@ -69,6 +69,11 @@ if [ -d "$INSTALL_DIR" ]; then
       echo -e "${YELLOW}🔄 Restarting Apache...${RESET}"
       systemctl restart apache2
 
+      echo -e "${YELLOW}🔐 Fixing ownership after update...${RESET}"
+      chown -R www-data:www-data "$INSTALL_DIR"
+      find "$INSTALL_DIR" -type d -exec chmod 755 {} \;
+      find "$INSTALL_DIR" -type f -exec chmod 644 {} \;
+
       echo -e "${YELLOW}🧹 Cleaning up...${RESET}"
       rm -rf "$TEMP_DIR"
       echo -e "${YELLOW}✅ Update complete.${RESET}"

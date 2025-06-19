@@ -5,6 +5,12 @@
   <title>Viewer Report</title>
   <script src="/static/js/chart.umd.js"></script>
 
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/static/favicon/site.webmanifest">
+
+
   <style>
     body {
       font-family: sans-serif;
@@ -53,6 +59,10 @@
   <h1>Live Viewer Report</h1>
   <div class="status" id="status">Loading data...</div>
 
+  <label for="date-picker">Select Date:</label>
+  <select id="date-picker" onchange="fetchData()"></select>
+
+
   <div class="charts">
     <div style="flex: 1">
       <h3 style="text-align:center;">1st Innings</h3>
@@ -84,19 +94,93 @@
     <tbody></tbody>
   </table>
 
+
+
 <script>
-let chart1Instance = null;
-let chart2Instance = null;
+  async function loadAvailableDates() {
+    const response = await fetch("/viewer_ping_dates");
+    const dates = await response.json();
+    const select = document.getElementById("date-picker");
 
-async function fetchData() {
-  const [viewerResp, pingResp] = await Promise.all([
-    fetch('/viewer_data').then(r => r.json()),
-    fetch('/viewer_ping_data').then(r => r.json())
-  ]);
+    select.innerHTML = "";
+    dates.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      select.appendChild(opt);
+    });
 
-  renderTable(viewerResp.sessions);
-  renderCharts(pingResp);
-}
+    const saved = localStorage.getItem("viewer_report_date");
+    if (saved && dates.includes(saved)) {
+      select.value = saved;
+    } else if (dates.length > 0) {
+      select.value = dates[0];
+    }
+  }
+
+  async function fetchData() {
+    const selectedDate = document.getElementById("date-picker").value;
+    setStatus(`Loading viewer stats for ${selectedDate}...`);
+
+    try {
+      const res = await fetch(`/viewer_ping_data?date=${selectedDate}`);
+      const pings = await res.json();
+
+      const grouped = { 1: {}, 2: {} };
+      const sessions = {};
+
+      for (const p of pings) {
+        const ip = p.ip || "unknown";
+        const ts = new Date(p.timestamp * 1000);
+        const over = Math.floor(p.overs || 0);
+        const innings = p.innings || 1;
+        const type = p.ping_type || "interval";
+
+        // Chart grouping
+        if (!grouped[innings][over]) {
+          grouped[innings][over] = { initial: 0, visible: 0, interval: 0 };
+        }
+        if (grouped[innings][over][type] !== undefined) {
+          grouped[innings][over][type]++;
+        }
+
+        // Session aggregation
+        if (!sessions[ip]) {
+          sessions[ip] = {
+            first_seen: ts,
+            last_seen: ts,
+            pings: 0,
+            user_agent: p.user_agent || "",
+            screen: p.screen || {},
+            mode: p.mode || "",
+            innings: p.innings || 1,
+            overs: p.overs || 0,
+            ping_type_counts: { initial: 0, visible: 0, interval: 0 }
+          };
+        }
+
+        const s = sessions[ip];
+        s.last_seen = ts;
+        s.pings += 1;
+        s.innings = p.innings || 1;
+        s.overs = p.overs || 0;
+        s.ping_type_counts[type] += 1;
+      }
+
+      renderCharts(grouped);
+      renderTable(sessions);
+      setStatus(`Viewer stats for ${selectedDate} loaded.`);
+    } catch (err) {
+      console.error("Failed to fetch viewer ping data", err);
+      setStatus("⚠️ Failed to load data");
+    }
+  }
+
+  document.getElementById("date-picker").addEventListener("change", (e) => {
+    const newDate = e.target.value;
+    localStorage.setItem("viewer_report_date", newDate);
+    fetchData();
+  });
 
 function renderTable(sessions) {
   const tbody = document.querySelector('#viewer-table tbody');
@@ -107,9 +191,10 @@ function renderTable(sessions) {
   status.textContent = `Active Viewers: ${count}`;
 
   Object.entries(sessions).forEach(([ip, info]) => {
-    const sessionMinutes = Math.round((info.last_seen - info.first_seen) / 60);
+    const sessionMinutes = Math.round((info.last_seen - info.first_seen) / 60000);
     const activeMinutes = Math.round(info.pings * 15 / 60);
     const screen = info.screen ? `${info.screen.width}×${info.screen.height}` : "";
+    const ua = info.user_agent || "";
     const types = info.ping_type_counts || {};
 
     const row = document.createElement("tr");
@@ -124,76 +209,28 @@ function renderTable(sessions) {
       <td>${info.mode || ""}</td>
       <td>${info.innings || ""}</td>
       <td>${info.overs || ""}</td>
-      <td>${info.user_agent || ""}</td>
+      <td>${ua}</td>
       <td>${screen}</td>
     `;
     tbody.appendChild(row);
   });
 }
 
-function renderCharts(pings) {
-  const maxOvers = 40;
-  const bins = [...Array(maxOvers + 1).keys()]; // 0 to 40
 
-  function createData(inningsNum) {
-    const counts = {
-      initial: new Array(maxOvers + 1).fill(0),
-      visible: new Array(maxOvers + 1).fill(0),
-      interval: new Array(maxOvers + 1).fill(0)
-    };
 
-    for (const ping of pings) {
-      if (ping.innings !== inningsNum) continue;
-      const over = Math.floor(ping.overs || 0);
-      if (over < 0 || over > maxOvers) continue;
-      const type = ping.ping_type || "interval";
-      if (counts[type]) counts[type][over]++;
-    }
-
-    return counts;
-  }
-
-  const data1 = createData(1);
-  const data2 = createData(2);
-
-  const datasetsFrom = (d) => [
-    { label: "Initial", data: d.initial, backgroundColor: "#3b82f6" },
-    { label: "Visible", data: d.visible, backgroundColor: "#f59e0b" },
-    { label: "Interval", data: d.interval, backgroundColor: "#10b981" }
-  ];
-
-  const options = {
-    responsive: true,
-    scales: {
-      x: { stacked: true, title: { display: true, text: "Overs" } },
-      y: {
-        stacked: true,
-        title: { display: true, text: "Pings" },
-        beginAtZero: true,
-        ticks: { precision: 0 }
-      }
-    },
-    animation: false
+  window.onload = () => {
+    loadAvailableDates().then(() => {
+      fetchData();
+    });
   };
 
-  if (chart1Instance) chart1Instance.destroy();
-  if (chart2Instance) chart2Instance.destroy();
-
-  chart1Instance = new Chart(document.getElementById("chart1"), {
-    type: "bar",
-    data: { labels: bins, datasets: datasetsFrom(data1) },
-    options
-  });
-
-  chart2Instance = new Chart(document.getElementById("chart2"), {
-    type: "bar",
-    data: { labels: bins, datasets: datasetsFrom(data2) },
-    options
-  });
-}
-
-fetchData();
-setInterval(fetchData, 10000); // Refresh every 10 seconds
+  // Refresh every 60 seconds if tab is visible
+  setInterval(() => {
+    if (document.visibilityState === "visible") {
+      fetchData();
+    }
+  }, 60000);
 </script>
+<script src="/static/js/viewer_report_shared.js"></script>
 </body>
 </html>
