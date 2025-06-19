@@ -448,7 +448,12 @@ def push_score_to_arduino():
     overs = data.get("overs_bowled", "0") if source == "PCS" else data.get("overs", "0")
     batsa = data.get("batter_1_score", "0")
     batsb = data.get("batter_2_score", "0")
-    target = data.get("target", "0")
+    # Determine target based on mode
+    if source == "PCS":
+        bowling_score = data.get("bowling_team_score", "0")
+        target = str(int(bowling_score) + 1) if bowling_score.isdigit() else "0"
+    else:
+        target = data.get("target", "0")
 
     # Prepare minimal dictionary for serial output
     score_data = {
