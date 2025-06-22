@@ -442,8 +442,16 @@ def push_score_to_arduino():
     data_file = DATA_PCS_FILE if source == "PCS" else DATA_MANUAL_FILE
     data = read_json(data_file)
 
+
     score_str = data.get("batting_team_score", "0/0")
-    total, wkts = score_str.split('/') if '/' in score_str else ("0", "0")
+    # total, wkts = score_str.split('/') if '/' in score_str else ("0", "0")
+    parts = score_str.split('/')
+    if len(parts) == 2:
+        total, wkts = parts
+    elif len(parts) == 1:
+        total, wkts = parts[0], ""  # send blank wickets if not provided
+    else:
+        total, wkts = "0", ""
 
     overs = data.get("overs_bowled", "0") if source == "PCS" else data.get("overs", "0")
     batsa = data.get("batter_1_score", "0")
