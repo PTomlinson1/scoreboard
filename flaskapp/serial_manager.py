@@ -118,6 +118,7 @@ class SerialManager:
             # Special rule for 'target': show dashes if 0 or missing
             if name == "target" and (not val or str(val) == "0"):
                 parts.append(pad * width)
+                value_map[name] = None
                 continue
 
             try:
@@ -125,6 +126,7 @@ class SerialManager:
                 value_map[name] = val_int
                 parts.append(str(val_int).rjust(width, pad))
             except:
+                value_map[name] = None
                 parts.append(pad * width)
 
         serial_string = self.output_format.get("prefix", "") + ",".join(parts) + self.output_format.get("suffix", "")
@@ -153,9 +155,18 @@ class SerialManager:
             if len(ack_parts) != len(fields):
                 logger.warning(f"[ACK Match] Field count mismatch: expected {len(fields)} fields, got {len(ack_parts)} in ACK")
                 return False
+            
+            pad_char = self.output_format.get("pad", "-")
 
             for i, key in enumerate(fields):
-                val = int(ack_parts[i].replace("-", "") or "0")
+                raw = ack_parts[i].strip()
+                if all(c == pad_char for c in raw):
+                    val = None
+                else:
+                    try:
+                        val = int(raw.lstrip(pad_char))
+                    except:
+                        val = None
                 ack_map[key] = val
 
             logger.debug(f"[ACK Debug] Comparing sent={self.last_sent_values} vs ack={ack_map}")

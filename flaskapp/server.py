@@ -466,7 +466,7 @@ def push_score_to_arduino():
     # Prepare minimal dictionary for serial output
     score_data = {
         "total": int(total) if total.isdigit() else 0,
-        "wickets": int(wkts) if wkts.isdigit() else 0,
+        "wickets": int(wkts) if wkts.isdigit() else None,
         "overs": int(float(overs)) if overs.replace('.', '', 1).isdigit() else 0,
         "batsa": int(batsa) if str(batsa).isdigit() else 0,
         "batsb": int(batsb) if str(batsb).isdigit() else 0,
