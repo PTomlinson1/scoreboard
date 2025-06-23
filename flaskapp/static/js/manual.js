@@ -130,7 +130,11 @@ function toggleMode() {
 
 function update() {
   display("total_count", total, 3);
-  display("wickets_count", wickets, 1);
+  if (wickets === "-") {
+    document.getElementById("wickets_count").innerHTML = `<span class="dim">-</span>`;
+  } else {
+    display("wickets_count", wickets, 1);
+  }
   display("overs_count", overs, 2);
   display("batsa_count", batsa, 3);
   display("batsb_count", batsb, 3);
@@ -140,7 +144,7 @@ function update() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        batting_team_score: `${total}/${wickets}`,
+        batting_team_score: `${total}/${wickets === "-" ? "-" : wickets}`,
         overs: String(overs),
         batter_1_score: String(batsa),
         batter_2_score: String(batsb),
@@ -330,9 +334,22 @@ const total_change = guarded(function(dir, val) {
 
 const wickets_change = guarded(function(dir, val) {
   if (dir === 'zero') return confirmZero(() => { wickets = 0; update(); });
-  wickets += (dir === 'plus' ? val : -val);
-  if (wickets < 0) wickets = 0;
-  if (wickets > 9) wickets = 9;
+  if (dir === 'plus') {
+    if (typeof wickets === 'string' && wickets === "-") {
+      // Do nothing if already blank
+    } else if (wickets >= 9) {
+      wickets = "-";
+    } else {
+      wickets += 1;
+    }
+  }
+  if (dir === 'minus') {
+    if (wickets === "-") {
+      wickets = 9;
+    } else if (wickets > 0) {
+      wickets -= 1;
+    }
+  }
   update();
 });
 
@@ -363,9 +380,10 @@ const set_target = guarded(function() {
 });
 
 function loadData(data) {
-  const score = data.batting_team_score.split('/');
-  total = parseInt(score[0] || "0");
-  wickets = parseInt(score[1] || "0");
+  const scoreParts = (data.batting_team_score || "0/0").split('/');
+  const runs = scoreParts[0] || "0";
+  let wkts = scoreParts.length > 1 ? scoreParts[1] : "-";
+  wickets = (wkts === "-" || wkts === "") ? "-" : parseInt(wkts);
   overs = parseInt(data.overs || "0");
   batsa = parseInt(data.batter_1_score || "0");
   batsb = parseInt(data.batter_2_score || "0");
@@ -787,7 +805,13 @@ function showZeroBatterPopup(idPrefix) {
 	  if (idPrefix === 'batsa') batsa = score;
 	  else batsb = score;
 
-	  if (addWicket) wickets += 1;
+	  if (addWicket && wickets !== "-") {
+        if (wickets < 9) {
+          wickets += 1;
+        } else if (wickets === 9) {
+          wickets = "-";
+        }
+      }
 
 	  update();  // updates digits and posts score + wickets
 

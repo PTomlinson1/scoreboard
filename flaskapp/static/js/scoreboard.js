@@ -45,7 +45,25 @@ function loadData() {
   fetch('/data')
     .then(res => res.json())
     .then(data => {
-      const [runs, wkts] = safeText(data, 'batting_team_score', '0/0').split('/');
+      const scoreStr = data.batting_team_score || "0/0";
+      const parts = scoreStr.split("/");
+	  const runs = parts[0] || "0";
+      const wkts = parts.length > 1 ? parts[1] : "-";
+      let wicketsValue;
+      if (wkts === "-" || wkts === "" || isNaN(parseInt(wkts))) {
+        document.getElementById("manual_wkts").innerHTML = `<span class="dim">-</span>`;
+        const alt = document.getElementById("manual_wkts_alt");
+        if (alt) alt.innerHTML = `<span class="dim">-</span>`;
+        wicketsValue = null;
+      } else {
+        const w = parseInt(wkts);
+        setDigits("manual_wkts", w, 1);
+        const alt = document.getElementById("manual_wkts_alt");
+        if (alt) setDigits("manual_wkts_alt", w, 1);
+        wicketsValue = w;
+      }
+
+	  
       const overs = parseFloat(safeText(data, 'overs', '0'));
       const total = parseInt(runs || 0);
       const target = parseInt(safeText(data, 'target', '0'));
@@ -54,7 +72,7 @@ function loadData() {
       const manualRequiredRunRate = (target > 0 && manualOversRemaining > 0) ? ((target - total) / manualOversRemaining).toFixed(1) : '--';
 
       setDigits('manual_total', total, 3);
-      setDigits('manual_wkts', parseInt(wkts || 0), 1);
+
       setDigits('manual_overs', overs, 2);
 
       updateIfExists('manual_team_names', `${safeText(data, 'home_team')}   vs   ${safeText(data, 'away_team')}`);
@@ -78,8 +96,15 @@ fetch("/load_options")
       if (wktsTop) wktsTop.style.display = "none";
       if (wktsMid) {
         wktsMid.style.display = "inline-block";
-        setDigits("manual_wkts_alt", parseInt(wkts || 0), 1);
+        const wktsAlt = document.getElementById("manual_wkts_alt");
+        if (wicketsValue === null) {
+          if (wktsAlt) wktsAlt.innerHTML = `<span class="dim">-</span>`;
+        } else {
+          if (wktsAlt) setDigits("manual_wkts_alt", wicketsValue, 1);
+        }
       }
+
+
     } else {
       if (b1) b1.style.display = "none";
       if (b2) b2.style.display = "none";
