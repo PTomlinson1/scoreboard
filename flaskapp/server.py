@@ -481,7 +481,7 @@ def push_score_to_arduino():
         
 
     # Push the score and mode to Firebase
-    if firebase_enabled and firebase_mgr:
+    if firebase_mgr:
         firebase_mgr.publish("data", data)
         firebase_mgr.publish("priority", priority)
         # Push options to Firebase (team names, overs, etc.)
