@@ -481,10 +481,15 @@ def push_score_to_arduino():
         
 
     # Push the score and mode to Firebase
-    if firebase_mgr:
+    if firebase_enabled and firebase_mgr:
         firebase_mgr.publish("data", data)
         firebase_mgr.publish("priority", priority)
-
+        # Push options to Firebase (team names, overs, etc.)
+        try:
+            options = read_json(OPTIONS_FILE)
+            firebase_mgr.publish("options", options)
+        except Exception as e:
+            logger.warning(f"[push_to_arduino] Failed to read or publish options: {e}")
 
 
 
