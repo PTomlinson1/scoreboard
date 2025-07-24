@@ -45,6 +45,21 @@ def push_today_to_viewer_dates():
     except Exception as e:
         logger.warning(f"[Firestore] Failed to update viewer_dates: {e}")
 
+def safe_firestore_push(doc_ref, data, max_retries=3, retry_delay=2):
+    """
+    Attempts to push data to Firestore with retry logic.
+    """
+    for attempt in range(1, max_retries + 1):
+        try:
+            doc_ref.set(data, merge=True)
+            return True
+        except Exception as e:
+            logger.warning(f"[Firestore] Attempt {attempt} failed to update Firestore: {e}")
+            time.sleep(retry_delay)
+    return False
+
+
+
 class FirebasePublisher:
     def __init__(self, config):
         self.enabled = config.get("FIREBASE_ENABLED", False)
@@ -56,6 +71,8 @@ class FirebasePublisher:
         self.running = False
         self.last_error = None
         self.last_sent_data = {}
+        self.consecutive_failures = 0
+        self.failure_threshold = 6
         self.start()
 
     def start(self):
@@ -101,9 +118,19 @@ class FirebasePublisher:
                 logger.debug(f"[Firestore] No changes detected for '{document_name}', skipping update")
                 return
 
-            doc_ref.set(changed_fields, merge=True)
-            logger.info(f"[Firestore] Updated document '{document_name}' in collection '{self.collection}' via Admin SDK")
-            logger.debug(f"[Firestore] Updated with data: {changed_fields}")
+            success = safe_firestore_push(doc_ref, changed_fields)
+            if success:
+                logger.info(f"[Firestore] Updated document '{document_name}' in collection '{self.collection}' via Admin SDK")
+                logger.debug(f"[Firestore] Updated with data: {changed_fields}")
+                doc_last.update(changed_fields)
+                self.consecutive_failures = 0  # reset on success
+            else:
+                self.consecutive_failures += 1
+                logger.warning(f"[Firestore] Failed to push '{document_name}' after retries (failure count = {self.consecutive_failures})")
+                if self.consecutive_failures >= self.failure_threshold:
+                    logger.error("[Firestore] Too many consecutive failures — restarting FirebasePublisher thread")
+                    self.restart()
+
 
             # Update only this document's last_sent_data
             doc_last.update(changed_fields)
@@ -121,6 +148,13 @@ class FirebasePublisher:
                 continue
             except Exception as e:
                 logger.error(f"[Firestore] Unexpected error in FirebasePublisher thread: {e}")
+
+    def restart(self):
+        self.stop()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.start()
+        self.consecutive_failures = 0
+        logger.info("[Firestore] FirebasePublisher thread restarted")
 
 
 def delayed_push_viewer_date():
