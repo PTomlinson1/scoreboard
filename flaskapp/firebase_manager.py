@@ -27,6 +27,24 @@ def init_firebase(credentials_path):
             logger.error(f"[Firestore] Failed to initialize Firebase Admin: {e}")
             raise
 
+def reinitialize_firebase(credentials_path):
+    global firebase_initialized
+    try:
+        firebase_admin.delete_app(firebase_admin.get_app())
+        firebase_initialized = False
+        logger.warning("[Firestore] Firebase Admin app deleted for reinitialization")
+    except Exception as e:
+        logger.error(f"[Firestore] Error deleting Firebase app: {e}")
+
+    try:
+        cred = credentials.Certificate(credentials_path)
+        firebase_admin.initialize_app(cred)
+        firebase_initialized = True
+        logger.info("[Firestore] Firebase Admin reinitialized after failure")
+    except Exception as e:
+        logger.error(f"[Firestore] Failed to reinitialize Firebase Admin: {e}")
+
+
 def push_today_to_viewer_dates():
     global firebase_initialized
     if not firebase_initialized:
@@ -45,20 +63,6 @@ def push_today_to_viewer_dates():
     except Exception as e:
         logger.warning(f"[Firestore] Failed to update viewer_dates: {e}")
 
-def safe_firestore_push(doc_ref, data, max_retries=3, retry_delay=2):
-    """
-    Attempts to push data to Firestore with retry logic.
-    """
-    for attempt in range(1, max_retries + 1):
-        try:
-            doc_ref.set(data, merge=True)
-            return True
-        except Exception as e:
-            logger.warning(f"[Firestore] Attempt {attempt} failed to update Firestore: {e}")
-            time.sleep(retry_delay)
-    return False
-
-
 
 class FirebasePublisher:
     def __init__(self, config):
@@ -71,8 +75,6 @@ class FirebasePublisher:
         self.running = False
         self.last_error = None
         self.last_sent_data = {}
-        self.consecutive_failures = 0
-        self.failure_threshold = 6
         self.start()
 
     def start(self):
@@ -101,8 +103,8 @@ class FirebasePublisher:
         try:
             db = firestore.client()
             doc_ref = db.collection(self.collection).document(document_name)
-    
-            # NEW: Track last sent fields per document
+
+            # Track last sent fields per document
             if document_name not in self.last_sent_data:
                 self.last_sent_data[document_name] = {}
 
@@ -118,22 +120,29 @@ class FirebasePublisher:
                 logger.debug(f"[Firestore] No changes detected for '{document_name}', skipping update")
                 return
 
-            success = safe_firestore_push(doc_ref, changed_fields)
+            max_retries = 2
+            retry_delay = 2
+            success = False
+            for attempt in range(1, max_retries + 1):
+                try:
+                    doc_ref.set(changed_fields, merge=True)
+                    success = True
+                    break
+                except Exception as e:
+                    logger.warning(f"[Firestore] Attempt {attempt} failed for '{document_name}': {e}")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # exponential backoff
+
             if success:
                 logger.info(f"[Firestore] Updated document '{document_name}' in collection '{self.collection}' via Admin SDK")
                 logger.debug(f"[Firestore] Updated with data: {changed_fields}")
                 doc_last.update(changed_fields)
-                self.consecutive_failures = 0  # reset on success
             else:
-                self.consecutive_failures += 1
-                logger.warning(f"[Firestore] Failed to push '{document_name}' after retries (failure count = {self.consecutive_failures})")
-                if self.consecutive_failures >= self.failure_threshold:
-                    logger.error("[Firestore] Too many consecutive failures — restarting FirebasePublisher thread")
-                    self.restart()
-
-
-            # Update only this document's last_sent_data
-            doc_last.update(changed_fields)
+                logger.error(f"[Firestore] Failed to push '{document_name}' after {max_retries} retries — Reinitialising Firebase Admin")
+                reinitialize_firebase(self.credentials_path)
+                # Re-queue the failed item to try again later
+                self.queue.put((document_name, data))
+                logger.info(f"[Firestore] Requeued '{document_name}' after reinitialization for another attempt")
 
         except Exception as e:
             self.last_error = str(e)
@@ -149,12 +158,6 @@ class FirebasePublisher:
             except Exception as e:
                 logger.error(f"[Firestore] Unexpected error in FirebasePublisher thread: {e}")
 
-    def restart(self):
-        self.stop()
-        self.thread = threading.Thread(target=self._run, daemon=True)
-        self.start()
-        self.consecutive_failures = 0
-        logger.info("[Firestore] FirebasePublisher thread restarted")
 
 
 def delayed_push_viewer_date():
