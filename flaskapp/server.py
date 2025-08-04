@@ -78,15 +78,16 @@ from config import FIREBASE_ENABLED, FIREBASE_CREDENTIAL_PATH, FIREBASE_COLLECTI
 
 # Default data structure: all fields blank except batting_team_score and overs
 default_data = {
-    "batting_team_score": "",
-    "overs": "",  # Only used in manual mode
-    "overs_bowled": "",
+    "batting_team_score": "0/0",
+    "overs": "0",  # Only used in manual mode
+    "overs_bowled": "0",
     "overs_remaining": "",
     "runs_required": "",
     "required_run_rate": "",
     "batting_team_name": "",
     "bowling_team_name": "",
     "bowling_team_score": "",
+    "pcs_target": "",
     "current_bowler_name": "",
     "current_bowler_score": "",
     "previous_bowler_name": "",
@@ -539,6 +540,7 @@ def update_pcs():
         "RRR": "required_run_rate",
         "BTN": "batting_team_name",
         "BTS": "batting_team_score",
+        "BTT": "pcs_target",
         "FTN": "bowling_team_name",
         "FTS": "bowling_team_score",
         "B1N": "batter_1_name",
